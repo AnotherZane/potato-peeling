@@ -1,0 +1,42 @@
+potato-peeling is licensed under the GNU Lesser General Public License v3.0 or later
+(COPYING.LESSER, which supplements the GNU General Public License v3.0 in COPYING).
+
+It is compiled against or includes the following third-party software. Built wheels
+contain compiled code from each of them.
+
+
+CGAL, the Computational Geometry Algorithms Library -- https://www.cgal.org
+  Only CGAL packages licensed under the LGPL are used (the build defines
+  CGAL_LICENSE_ERROR, which rejects GPL-licensed packages): the 2D kernel, number
+  types, 2D polygons and intersections.
+  Licence: LGPL-3.0-or-later (COPYING.LESSER, COPYING).
+  Cite: The CGAL Project. CGAL User and Reference Manual. CGAL Editorial Board.
+  https://doc.cgal.org/latest/Manual/how_to_cite_cgal.html
+
+GMP, the GNU Multiple Precision Arithmetic Library -- https://gmplib.org
+  Used under LGPL-3.0 (one of its dual licences; COPYING.LESSER, COPYING).
+
+MPFR -- https://www.mpfr.org
+  Licence: LGPL-3.0-or-later (COPYING.LESSER, COPYING).
+
+Boost -- https://www.boost.org
+  Header-only parts, through CGAL.
+  Licence: BSL-1.0 (LICENSES/BSL-1.0.txt).
+
+CDT, C++ library for constrained Delaunay triangulation -- https://github.com/artem-ogre/CDT
+  This software is based in part on CDT (C++ library for constrained Delaunay
+  triangulation):
+  Copyright (c) 2019 Leica Geosystems Technology AB
+  Copyright (c) The CDT Contributors
+  Licensed under the MPL-2.0 license (LICENSES/MPL-2.0-CDT.txt).
+  CDT includes:
+    predicates.h, Copyright (c) 2019 William C. Lenthe, BSD-3-Clause
+      (LICENSES/BSD-3-Clause-CDT-predicates.txt)
+    portable_nth_element.hpp, from the LLVM Project, Apache-2.0 WITH LLVM-exception
+      (LICENSES/Apache-2.0-WITH-LLVM-exception-CDT.txt)
+
+nanobind -- https://github.com/wjakob/nanobind
+  Python bindings, compiled in statically.
+  Copyright (c) 2022 Wenzel Jakob. Licence: BSD-3-Clause (LICENSES/BSD-3-Clause-nanobind.txt).
+  nanobind includes robin_map (https://github.com/Tessil/robin-map),
+  Copyright (c) 2017 Thibaut Goetghebuer-Planchon, MIT (LICENSES/MIT-robin-map.txt).

@@ -1,0 +1,30 @@
+[build-system]
+requires = ["scikit-build-core>=0.11", "nanobind>=3.0"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "potato-peeling"
+version = "0.1.0.dev0"
+description = "The largest convex polygon inside a simple polygon: exact, meshed and approximate algorithms"
+readme = "README.md"
+license = "LGPL-3.0-or-later"
+license-files = ["COPYING.LESSER", "COPYING", "THIRD-PARTY-NOTICES.txt", "LICENSES/*.txt"]
+authors = [
+    { name = "Zane Dmitri Pereira", email = "zanedpereira2@gmail.com" },
+]
+requires-python = ">=3.12"
+
+[project.urls]
+Repository = "https://github.com/AnotherZane/potato-peeling"
+
+[tool.scikit-build]
+wheel.py-api = "cp312"
+wheel.packages = ["python/potato_peeling"]
+cmake.build-type = "Release"
+# Install only our module, not the install rules of dependencies built from source (CDT).
+install.components = ["python"]
+build-dir = "build/{wheel_tag}"
+sdist.exclude = ["build/"]
+
+[dependency-groups]
+dev = ["pytest>=8"]
