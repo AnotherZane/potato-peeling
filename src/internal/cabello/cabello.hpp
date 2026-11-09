@@ -48,6 +48,7 @@ namespace potato_peeling::internal::cabello {
         // at random; nullopt searches them all.
         std::optional<std::size_t> max_edges = 64;
 
+        // 0 = every hardware thread.
         unsigned threads = 1;
     };
 

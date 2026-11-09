@@ -52,7 +52,7 @@ NB_MODULE(_core, m) {
             }
             return to_dict(s);
         },
-        nb::arg("polygon"), nb::kw_only(), nb::arg("seed") = 0, nb::arg("threads") = 1u);
+        nb::arg("polygon"), nb::kw_only(), nb::arg("seed") = 0, nb::arg("threads") = 0u);
 
     m.def(
         "exact_convex_skull",
@@ -100,7 +100,7 @@ NB_MODULE(_core, m) {
         },
         nb::arg("polygon"), nb::kw_only(), nb::arg("epsilon") = 0.1, nb::arg("delta") = 1.0 / 3.0,
         nb::arg("seed") = 0, nb::arg("sample_scale") = 3e-4, nb::arg("s_scale") = 3e-2,
-        nb::arg("max_edges").none() = std::size_t{64}, nb::arg("threads") = 1u);
+        nb::arg("max_edges").none() = std::size_t{64}, nb::arg("threads") = 0u);
 
     m.def(
         "refine",

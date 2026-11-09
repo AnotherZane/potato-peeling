@@ -169,7 +169,8 @@ namespace potato_peeling::internal::cabello {
 
             // Lines 8-14.
             std::vector<EdgeResult> per_edge(edges.size());
-            const unsigned threads = std::max(1u, opt.threads);
+            const unsigned threads
+                = opt.threads ? opt.threads : std::max(1u, std::thread::hardware_concurrency());
             if (threads == 1) {
                 for (std::size_t e = 0; e < edges.size(); ++e)
                     per_edge[e] = search_edge(opt, oracle, R[edges[e].first], R[edges[e].second], U,

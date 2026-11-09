@@ -1,6 +1,9 @@
 #pragma once
 
 // Options for the methods.
+//
+// threads = 0 uses every hardware thread. The answer does not depend on the
+// thread count; set 1 when running many polygons in parallel yourself.
 
 #include <cstddef>
 #include <cstdint>
@@ -13,7 +16,7 @@ namespace potato_peeling {
     // adjoin moves.
     struct ConvexSkullOptions {
         std::uint64_t seed = 0;
-        unsigned threads = 1;
+        unsigned threads = 0;
     };
 
     // With sample_scale = s_scale = 1 and no max_edges, approximate_convex_skull
@@ -27,7 +30,7 @@ namespace potato_peeling {
         double sample_scale = 3e-4;                 // scale of |R_ab|; 1 = the paper's size
         double s_scale = 3e-2;                      // scale of |S_ab|; 1 = the paper's size
         std::optional<std::size_t> max_edges = 64;  // nullopt = search every edge
-        unsigned threads = 1;
+        unsigned threads = 0;
     };
 
     struct RefineOptions {
