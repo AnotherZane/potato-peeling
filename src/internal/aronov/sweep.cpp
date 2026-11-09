@@ -287,10 +287,13 @@ namespace potato_peeling::internal::aronov::sweep {
             for (const std::size_t e : er) check_gap(e);
         }
 
+        // Ties on min X go to the smaller pair, so the order is unique.
         std::sort(reported.begin(), reported.end(), [&](const EdgePair &a, const EdgePair &b) {
             const FT a0 = mesh.left_point(a.first).x(), a1 = mesh.left_point(a.second).x();
             const FT b0 = mesh.left_point(b.first).x(), b1 = mesh.left_point(b.second).x();
-            return ((a0 > a1) ? a0 : a1) < ((b0 > b1) ? b0 : b1);
+            const FT ka = (a0 > a1) ? a0 : a1, kb = (b0 > b1) ? b0 : b1;
+            if (ka != kb) return ka < kb;
+            return a < b;
         });
         return reported;
     }

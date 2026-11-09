@@ -15,7 +15,7 @@ namespace potato_peeling::internal::aronov::sweep {
     // O(1). Pairs are born when the later edge begins, die when an exterior gap
     // opens between the two, and are reported when the earlier edge ends.
     //
-    // Returned sorted by min X(e, e').
+    // Returned sorted by min X(e, e'), ties by pair.
     std::vector<EdgePair> promising_pairs(const Mesh &mesh);
 
     // §2.2 (p356-357): the Q-values, via opp() and prefix maxima instead of scanning

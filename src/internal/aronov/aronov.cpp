@@ -19,7 +19,8 @@ namespace potato_peeling::internal::aronov {
             // clipping line x = max X(e, e') passes through it and U(C) is the whole
             // union rather than a clipped one.
             if (mesh.right(pair.first) != mesh.right(pair.second)) continue;
-            if (!best || entry.area > *best) {
+            // Equal areas go to the smallest pair, not to the hash table's order.
+            if (!best || entry.area > *best || (entry.area == *best && pair < *winner)) {
                 best = entry.area;
                 winner = pair;
             }
