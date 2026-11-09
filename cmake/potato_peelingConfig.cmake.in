@@ -1,7 +1,7 @@
 @PACKAGE_INIT@
 
 include(CMakeFindDependencyMacro)
-find_dependency(CGAL 6.0)
+find_dependency(CGAL 5.4)
 
 include("${CMAKE_CURRENT_LIST_DIR}/potato_peelingTargets.cmake")
 check_required_components(potato_peeling)

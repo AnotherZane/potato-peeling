@@ -1,9 +1,11 @@
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION 3.20)
 project(potato_peeling VERSION 0.1.0 LANGUAGES CXX)
 
-if (POLICY CMP0167)
-    cmake_policy(SET CMP0167 NEW)
-endif ()
+foreach (policy CMP0135 CMP0167)
+    if (POLICY ${policy})
+        cmake_policy(SET ${policy} NEW)
+    endif ()
+endforeach ()
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
@@ -20,20 +22,20 @@ include(GNUInstallDirs)
 include(GenerateExportHeader)
 include(CMakePackageConfigHelpers)
 
-find_package(CGAL 6.0 REQUIRED)
+find_package(CGAL 5.4 REQUIRED)
 find_package(Boost 1.74 CONFIG REQUIRED)
 
 # CDT (MPL-2.0), header-only and private to the build: an installed package if
 # there is one, else this pinned release. The release is only unpacked (its
 # CMake project, with its install rules, is not added).
-include(FetchContent)
-FetchContent_Declare(CDT
-        URL https://github.com/artem-ogre/CDT/archive/refs/tags/2.0.1.tar.gz
-        URL_HASH SHA256=5e3c45715e55b5f2d4390082c8c1ac026f635ddee233516fdcf94b197954367d
-        SOURCE_SUBDIR no-cmake-project
-        FIND_PACKAGE_ARGS CONFIG)
-FetchContent_MakeAvailable(CDT)
+find_package(CDT CONFIG QUIET)
 if (NOT TARGET CDT::CDT)
+    include(FetchContent)
+    FetchContent_Declare(CDT
+            URL https://github.com/artem-ogre/CDT/archive/refs/tags/2.0.1.tar.gz
+            URL_HASH SHA256=5e3c45715e55b5f2d4390082c8c1ac026f635ddee233516fdcf94b197954367d
+            SOURCE_SUBDIR no-cmake-project)
+    FetchContent_MakeAvailable(CDT)
     add_library(potato_peeling_cdt INTERFACE)
     target_include_directories(potato_peeling_cdt SYSTEM INTERFACE ${cdt_SOURCE_DIR}/CDT/include)
     add_library(CDT::CDT ALIAS potato_peeling_cdt)

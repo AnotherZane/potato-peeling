@@ -3,7 +3,6 @@
 #include <string>
 #include <algorithm>
 #include <stdexcept>
-#include <variant>
 
 namespace potato_peeling::internal::chang_and_yap {
 
@@ -57,13 +56,13 @@ namespace potato_peeling::internal::chang_and_yap {
             auto result = CGAL::intersection(*edge, segment);
             if (!result) continue;
 
-            if (const Point *p = std::get_if<Point>(&*result)) {
+            if (const Point *p = get_if<Point>(*result)) {
                 // A hit AT an edge endpoint is a CORNER of P. The boundary may touch
                 // the segment's line there and turn back without crossing it, so a
                 // corner is never a toggle site.
                 const bool at_corner = (*p == edge->source() || *p == edge->target());
                 add(*p, 1, at_corner, edge->source(), edge->target());
-            } else if (const Segment *s = std::get_if<Segment>(&*result)) {
+            } else if (const Segment *s = get_if<Segment>(*result)) {
                 // The segment runs ALONG this edge. Both ends of the overlap bound a
                 // stretch of dP rather than crossing it.
                 add(s->source(), 1, true, edge->source(), edge->target());
@@ -200,9 +199,9 @@ namespace potato_peeling::internal::chang_and_yap {
         std::vector<Point> box_intersections;
         for (const auto &edge : box_edges) {
             if (auto res = CGAL::intersection(geometric_line, edge)) {
-                if (const Point *p = std::get_if<Point>(&*res)) {
+                if (const Point *p = get_if<Point>(*res)) {
                     box_intersections.push_back(*p);
-                } else if (const Segment *s = std::get_if<Segment>(&*res)) {
+                } else if (const Segment *s = get_if<Segment>(*res)) {
                     box_intersections.push_back(s->source());
                     box_intersections.push_back(s->target());
                 }
@@ -229,10 +228,10 @@ namespace potato_peeling::internal::chang_and_yap {
             auto result = CGAL::intersection(*edge, clipped_segment);
             if (!result) continue;
 
-            if (const Point *p = std::get_if<Point>(&*result)) {
+            if (const Point *p = get_if<Point>(*result)) {
                 const bool at_corner = (*p == edge->source() || *p == edge->target());
                 crossings.push_back({*p, 1, at_corner, edge->source(), edge->target()});
-            } else if (const Segment *s = std::get_if<Segment>(&*result)) {
+            } else if (const Segment *s = get_if<Segment>(*result)) {
                 crossings.push_back({s->source(), 1, true, edge->source(), edge->target()});
                 crossings.push_back({s->target(), 1, true, edge->source(), edge->target()});
             }
@@ -744,7 +743,7 @@ namespace potato_peeling::internal::chang_and_yap {
         const auto inter = CGAL::intersection(L0, L1);
         if (!inter) return std::nullopt;
 
-        const Point *pt = std::get_if<Point>(&*inter);
+        const Point *pt = get_if<Point>(*inter);
         if (!pt) return std::nullopt;
 
         const Point &pt_ref = *pt;
@@ -796,7 +795,7 @@ namespace potato_peeling::internal::chang_and_yap {
         const auto result = CGAL::intersection(L0_reflected, L1);
         if (!result) return std::nullopt;  // parallel lines
 
-        const Point *x1 = std::get_if<Point>(&*result);
+        const Point *x1 = get_if<Point>(*result);
         if (!x1) return std::nullopt;  // coincident lines
 
         // x0 = 2p - x1
@@ -872,7 +871,7 @@ namespace potato_peeling::internal::chang_and_yap {
             // does not separate it from the apex.
             CGAL::Orientation core_side = CGAL::COLLINEAR;
             if (const auto apex = CGAL::intersection(L0, L1))
-                if (const Point *o = std::get_if<Point>(&*apex))
+                if (const Point *o = get_if<Point>(*apex))
                     core_side = CGAL::orientation(x0, xm, *o);
             if (core_side == CGAL::COLLINEAR) core_side = CGAL::orientation(x0, xm, c_ref);
             if (core_side == CGAL::COLLINEAR) core_side = CGAL::orientation(x0, xm, c_prime_ref);
@@ -981,7 +980,7 @@ namespace potato_peeling::internal::chang_and_yap {
         // — Section 5
         const auto inter = CGAL::intersection(L0_parallel, L1_parallel);
         if (!inter) return std::nullopt;
-        const Point *pt = std::get_if<Point>(&*inter);
+        const Point *pt = get_if<Point>(*inter);
         if (!pt) return std::nullopt;
         return *pt;
     }
@@ -1155,7 +1154,7 @@ namespace potato_peeling::internal::chang_and_yap {
         if (!inter) {
             return {false, FT(0)};
         }
-        const Point *junction = std::get_if<Point>(&*inter);
+        const Point *junction = get_if<Point>(*inter);
         if (!junction) {
             return {false, FT(0)};
         }
@@ -1738,7 +1737,7 @@ namespace potato_peeling::internal::chang_and_yap {
                 const Line edge_line(curr, next);
                 const auto inter = CGAL::intersection(clip_line, edge_line);
                 if (inter) {
-                    if (const Point *pt = std::get_if<Point>(&*inter)) result.push_back(*pt);
+                    if (const Point *pt = get_if<Point>(*inter)) result.push_back(*pt);
                 }
             }
         }

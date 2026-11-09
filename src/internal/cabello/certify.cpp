@@ -1,7 +1,6 @@
 #include "internal/cabello/certify.hpp"
 
 #include <algorithm>
-#include <variant>
 #include <cstddef>
 #include <iterator>
 
@@ -59,9 +58,9 @@ namespace potato_peeling::internal::cabello {
         for (auto e = p.edges_begin(); e != p.edges_end(); ++e) {
             const auto result = CGAL::intersection(s, *e);
             if (!result) continue;
-            if (const Point *q = std::get_if<Point>(&*result)) {
+            if (const Point *q = get_if<Point>(*result)) {
                 cuts.push_back(param_along(a, d, *q));
-            } else if (const Segment *sub = std::get_if<Segment>(&*result)) {
+            } else if (const Segment *sub = get_if<Segment>(*result)) {
                 // The chord runs along this edge: both ends are cut points.
                 cuts.push_back(param_along(a, d, sub->source()));
                 cuts.push_back(param_along(a, d, sub->target()));

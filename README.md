@@ -18,13 +18,13 @@ The implementations were developed for the thesis *Peeling Potatoes Exactly and 
 
 ## Building
 
-Requires a C++17 compiler, CMake 3.24 or later, and the CGAL, Boost, GMP and MPFR development packages. [CDT](https://github.com/artem-ogre/CDT) is used if installed, otherwise a pinned release is downloaded during the build.
+Requires a C++17 compiler, CMake 3.20 or later, and the CGAL (5.4 or later), Boost, GMP and MPFR development packages. [CDT](https://github.com/artem-ogre/CDT) is used if installed, otherwise a pinned release is downloaded during the build.
 
 ```
 uv sync
 ```
 
-builds the `potato_peeling` Python package (Python 3.12 or later).
+builds the `potato_peeling` Python package (Python 3.9 or later).
 
 ## Licence
 
