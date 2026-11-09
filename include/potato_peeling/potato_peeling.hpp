@@ -33,6 +33,12 @@ namespace potato_peeling {
     // triangulation. Aronov, van Kreveld, Löffler & Silveira (2011).
     POTATO_PEELING_EXPORT Skull mesh_convex_skull(const Polygon &p);
 
+    // The same over the caller's triangulation of P. Throws invalid_polygon unless
+    // the triangles tile P exactly (no gaps, overlaps or T-junctions). A finer mesh
+    // can only give a larger answer when it refines the coarser one; time grows
+    // steeply with the number of triangles.
+    POTATO_PEELING_EXPORT Skull mesh_convex_skull(const Polygon &p, const Mesh &mesh);
+
     // Randomised approximation. Cabello, Cibulka, Kynčl, Saumell & Valtr (2017).
     POTATO_PEELING_EXPORT Skull approximate_convex_skull(const Polygon &p,
                                                          const ApproximateOptions &options = {});
@@ -60,6 +66,12 @@ namespace potato_peeling {
               class = std::enable_if_t<!std::is_same_v<CGAL::Polygon_2<K, C>, Polygon>>>
     Skull mesh_convex_skull(const CGAL::Polygon_2<K, C> &p) {
         return mesh_convex_skull(to_polygon(p));
+    }
+
+    template <class K, class C,
+              class = std::enable_if_t<!std::is_same_v<CGAL::Polygon_2<K, C>, Polygon>>>
+    Skull mesh_convex_skull(const CGAL::Polygon_2<K, C> &p, const Mesh &mesh) {
+        return mesh_convex_skull(to_polygon(p), mesh);
     }
 
     template <class K, class C,

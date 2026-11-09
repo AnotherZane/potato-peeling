@@ -169,6 +169,25 @@ namespace potato_peeling::internal::aronov {
         return sweep::solve(mesh);
     }
 
+    namespace {
+        Polygon solve(const Polygon &polygon, const Mesh &mesh) {
+            // The shear is area-preserving (validate checks det == 1), so the mesh's
+            // total area must equal the polygon's exactly.
+            if (const MeshCheck check = validate(mesh, CGAL::abs(polygon.area())); !check.ok)
+                throw certification_error("aronov: mesh validation failed: " + check.message);
+            const MeshedSkull skull = largest_convex_subpolygon(mesh);
+            if (const SkullCheck check = check_skull(mesh, skull); !check.ok)
+                throw certification_error("aronov: skull validation failed: " + check.message);
+            return skull.boundary;
+        }
+
+        Polygon counterclockwise_copy(const Polygon &polygon) {
+            Polygon out = polygon;
+            if (out.orientation() == CGAL::CLOCKWISE) out.reverse_orientation();
+            return out;
+        }
+    }  // namespace
+
     Polygon convex_skull(const Polygon &polygon) {
         // A convex polygon is its own convex skull, exactly: the largest convex
         // subset of a convex set is the set itself. O(n), and it skips building
@@ -178,21 +197,16 @@ namespace potato_peeling::internal::aronov {
         // unions of mesh triangles, so on a convex polygon whose triangulation has
         // an interior structure the DP can return LESS than the whole polygon; the
         // shortcut makes the answer exact on convex input rather than mesh-limited.
-        if (polygon.is_convex()) {
-            Polygon out = polygon;
-            if (out.orientation() == CGAL::CLOCKWISE) out.reverse_orientation();
-            return out;
-        }
+        if (polygon.is_convex()) return counterclockwise_copy(polygon);
+        return solve(polygon, build_mesh(polygon));
+    }
 
-        const Mesh mesh = build_mesh(polygon);
-        // The shear is area-preserving (validate checks det == 1), so the mesh's total
-        // area must equal the polygon's exactly.
-        if (const MeshCheck check = validate(mesh, CGAL::abs(polygon.area())); !check.ok)
-            throw certification_error("aronov: mesh validation failed: " + check.message);
-        const MeshedSkull skull = largest_convex_subpolygon(mesh);
-        if (const SkullCheck check = check_skull(mesh, skull); !check.ok)
-            throw certification_error("aronov: skull validation failed: " + check.message);
-        return skull.boundary;
+    Polygon convex_skull(const Polygon &polygon, const std::vector<Point> &points,
+                         std::vector<std::array<std::size_t, 3>> triangles) {
+        // Validated even when P is convex, whose answer is P whatever the mesh.
+        const Mesh mesh = build_mesh(polygon, points, std::move(triangles));
+        if (polygon.is_convex()) return counterclockwise_copy(polygon);
+        return solve(polygon, mesh);
     }
 
 }  // namespace potato_peeling::internal::aronov

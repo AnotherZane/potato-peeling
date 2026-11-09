@@ -42,6 +42,12 @@ namespace potato_peeling {
         return make_skull("mesh_convex_skull", clean, internal::aronov::convex_skull(clean));
     }
 
+    Skull mesh_convex_skull(const Polygon &p, const Mesh &mesh) {
+        const Polygon clean = internal::clean_polygon(p);
+        return make_skull("mesh_convex_skull", clean,
+                          internal::aronov::convex_skull(clean, mesh.points, mesh.triangles));
+    }
+
     Skull approximate_convex_skull(const Polygon &p, const ApproximateOptions &options) {
         const Polygon clean = internal::clean_polygon(p);
         internal::cabello::Options opt;

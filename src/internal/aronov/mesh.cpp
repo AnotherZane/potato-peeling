@@ -262,6 +262,73 @@ namespace potato_peeling::internal::aronov {
         return finalize(boundary, triangulate_polygon(boundary));
     }
 
+    Mesh build_mesh(const Polygon &outer, const std::vector<Point> &points,
+                    std::vector<std::array<std::size_t, 3>> triangles) {
+        const auto bad = [](const std::string &what) { throw invalid_polygon("mesh: " + what); };
+        Polygon poly = outer;
+        if (poly.is_clockwise_oriented()) poly.reverse_orientation();
+        const std::size_t n = points.size();
+
+        std::vector<Point> sorted = points;
+        std::sort(sorted.begin(), sorted.end());
+        if (std::adjacent_find(sorted.begin(), sorted.end()) != sorted.end()) bad("repeated point");
+        if (triangles.empty()) bad("no triangles");
+
+        std::vector<bool> used(n, false);
+        std::set<std::pair<std::size_t, std::size_t>> directed;
+        FT total(0);
+        for (auto &t : triangles) {
+            for (const std::size_t v : t) {
+                if (v >= n) bad("triangle index out of range");
+                used[v] = true;
+            }
+            const CGAL::Orientation o = CGAL::orientation(points[t[0]], points[t[1]], points[t[2]]);
+            if (o == CGAL::COLLINEAR) bad("zero-area triangle");
+            if (o == CGAL::CLOCKWISE) std::swap(t[1], t[2]);
+            total += CGAL::area(points[t[0]], points[t[1]], points[t[2]]);
+            for (int k = 0; k < 3; ++k)
+                if (!directed.emplace(t[k], t[(k + 1) % 3]).second)
+                    bad("two triangles on the same side of an edge (overlap)");
+        }
+        if (std::find(used.begin(), used.end(), false) != used.end())
+            bad("a point is used by no triangle");
+
+        // The unmatched edges must tile P's boundary: on edge i of P, as
+        // intervals of the parameter (q - p_i) . (p_{i+1} - p_i).
+        const std::size_t m = poly.size();
+        std::vector<std::vector<std::pair<FT, FT>>> cover(m);
+        for (const auto &[u, v] : directed) {
+            if (directed.count({v, u})) continue;
+            const Point &a = points[u], &b = points[v];
+            bool placed = false;
+            for (std::size_t i = 0; i < m && !placed; ++i) {
+                const Point &p = poly[i], &q = poly[(i + 1) % m];
+                if (!CGAL::collinear(p, q, a) || !CGAL::collinear(p, q, b)) continue;
+                const Vector d = q - p;
+                const FT ta = (a - p) * d, tb = (b - p) * d;
+                if (ta < FT(0) || tb > d * d || !(ta < tb)) continue;
+                cover[i].emplace_back(ta, tb);
+                placed = true;
+            }
+            if (!placed)
+                bad("an unshared triangle edge is not on P's boundary (gap or T-junction)");
+        }
+        for (std::size_t i = 0; i < m; ++i) {
+            const Vector d = poly[(i + 1) % m] - poly[i];
+            auto &c = cover[i];
+            std::sort(c.begin(), c.end());
+            FT at(0);
+            for (const auto &[from, to] : c) {
+                if (from != at) bad("P's boundary is not covered exactly once");
+                at = to;
+            }
+            if (at != d * d) bad("P's boundary is not covered exactly once");
+        }
+        if (total != CGAL::abs(poly.area())) bad("triangle areas do not sum to P's area");
+
+        return finalize(points, std::move(triangles));
+    }
+
     // ── Validation ───────────────────────────────────────────────────────────
 
     MeshCheck validate(const Mesh &mesh, const std::optional<FT> &expected_area) {

@@ -68,6 +68,12 @@ namespace potato_peeling::simple {
         return to_simple(potato_peeling::mesh_convex_skull(to_exact(p)));
     }
 
+    SimpleSkull mesh_convex_skull(const Ring &p, const Mesh &mesh) {
+        const Polygon points = to_exact(mesh.points);
+        return to_simple(potato_peeling::mesh_convex_skull(
+            to_exact(p), {{points.vertices_begin(), points.vertices_end()}, mesh.triangles}));
+    }
+
     SimpleSkull approximate_convex_skull(const Ring &p, const ApproximateOptions &options) {
         return to_simple(potato_peeling::approximate_convex_skull(to_exact(p), options));
     }

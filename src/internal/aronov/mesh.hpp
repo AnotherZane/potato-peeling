@@ -111,6 +111,16 @@ namespace potato_peeling::internal::aronov {
     // the polygon vertices.
     Mesh build_mesh(const Polygon &outer);
 
+    // Build M from a caller's triangulation of a cleaned polygon, Steiner points
+    // allowed. Throws invalid_polygon unless the triangles tile P exactly: with
+    // every triangle CCW, no directed edge occurs twice (no two triangles on the
+    // same side of an edge), and the edges whose reverse is missing cover each
+    // edge of P exactly once in P's CCW direction. The number of triangles
+    // containing a point is then the winding number of P's boundary around it, so
+    // there are no gaps, overlaps or T-junctions, and nothing outside P.
+    Mesh build_mesh(const Polygon &outer, const std::vector<Point> &points,
+                    std::vector<std::array<std::size_t, 3>> triangles);
+
     // Mesh validation. `expected_area`, when given, is checked against total_area()
     // exactly.
     struct MeshCheck {

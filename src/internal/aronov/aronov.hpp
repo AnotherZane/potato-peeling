@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <optional>
 #include <string>
@@ -65,4 +66,8 @@ namespace potato_peeling::internal::aronov {
     // The largest convex union of triangles of P's default mesh, for a cleaned
     // polygon (clean_polygon). A convex P is returned as is.
     Polygon convex_skull(const Polygon &polygon);
+
+    // The same over a caller's triangulation of P (build_mesh's checks).
+    Polygon convex_skull(const Polygon &polygon, const std::vector<Point> &points,
+                         std::vector<std::array<std::size_t, 3>> triangles);
 }  // namespace potato_peeling::internal::aronov

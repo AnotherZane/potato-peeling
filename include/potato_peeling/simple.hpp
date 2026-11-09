@@ -3,6 +3,7 @@
 // The methods on plain double coordinates, for callers that do not use CGAL.
 
 #include <array>
+#include <cstddef>
 #include <vector>
 
 #include "potato_peeling/errors.hpp"
@@ -28,6 +29,14 @@ namespace potato_peeling::simple {
     POTATO_PEELING_EXPORT SimpleSkull exact_convex_skull(const Ring &p);
 
     POTATO_PEELING_EXPORT SimpleSkull mesh_convex_skull(const Ring &p);
+
+    // As potato_peeling::Mesh.
+    struct Mesh {
+        Ring points;
+        std::vector<std::array<std::size_t, 3>> triangles;
+    };
+
+    POTATO_PEELING_EXPORT SimpleSkull mesh_convex_skull(const Ring &p, const Mesh &mesh);
 
     POTATO_PEELING_EXPORT SimpleSkull approximate_convex_skull(const Ring &p,
                                                                const ApproximateOptions &options

@@ -1,6 +1,7 @@
 // Provisional bindings: the methods, each returning the exact vertices and
 // area as "num/den" strings. To be replaced by the designed Python API.
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -8,6 +9,7 @@
 #include <string>
 
 #include <nanobind/nanobind.h>
+#include <nanobind/stl/array.h>
 #include <nanobind/stl/optional.h>
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/vector.h>
@@ -77,6 +79,19 @@ NB_MODULE(_core, m) {
             return to_dict(s);
         },
         nb::arg("polygon"));
+
+    m.def(
+        "mesh_convex_skull",
+        [](const pp::Polygon &p, const std::vector<pp::Point> &points,
+           const std::vector<std::array<std::size_t, 3>> &triangles) {
+            pp::Skull s;
+            {
+                nb::gil_scoped_release release;
+                s = pp::mesh_convex_skull(p, pp::Mesh{points, triangles});
+            }
+            return to_dict(s);
+        },
+        nb::arg("polygon"), nb::arg("points"), nb::arg("triangles"));
 
     m.def(
         "approximate_convex_skull",

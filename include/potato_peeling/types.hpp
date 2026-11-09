@@ -1,6 +1,9 @@
 #pragma once
 
+#include <array>
+#include <cstddef>
 #include <type_traits>
+#include <vector>
 
 #include <CGAL/Cartesian_converter.h>
 #include <CGAL/Exact_predicates_exact_constructions_kernel.h>
@@ -18,6 +21,14 @@ namespace potato_peeling {
     struct Skull {
         Polygon polygon;
         FT area;
+    };
+
+    // A triangulation of P, for mesh_convex_skull: triangles as index triples into
+    // `points`, either orientation. Points other than P's vertices (Steiner points)
+    // may lie inside P or on its edges.
+    struct Mesh {
+        std::vector<Point> points;
+        std::vector<std::array<std::size_t, 3>> triangles;
     };
 
     // A polygon over any CGAL kernel, converted to this one. Exact for double
