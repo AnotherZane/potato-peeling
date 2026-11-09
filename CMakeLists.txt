@@ -45,6 +45,7 @@ add_library(potato_peeling_core OBJECT
         src/internal/geometry.cpp
         src/potato_peeling.cpp
         src/utilities.cpp
+        src/simple.cpp
         src/internal/chang_and_yap/chang_and_yap.cpp
         src/internal/aronov/mesh.cpp
         src/internal/aronov/predicates.cpp

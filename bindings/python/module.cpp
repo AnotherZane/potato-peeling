@@ -1,4 +1,4 @@
-// Provisional bindings: the four methods, each returning the exact vertices and
+// Provisional bindings: the methods, each returning the exact vertices and
 // area as "num/den" strings. To be replaced by the designed Python API.
 
 #include <cstddef>
@@ -38,6 +38,21 @@ namespace {
 
 NB_MODULE(_core, m) {
     m.doc() = "potato_peeling._core (provisional bindings)";
+
+    m.def(
+        "convex_skull",
+        [](const pp::Polygon &p, const std::uint64_t seed, const unsigned threads) {
+            pp::ConvexSkullOptions o;
+            o.seed = seed;
+            o.threads = threads;
+            pp::Skull s;
+            {
+                nb::gil_scoped_release release;
+                s = pp::convex_skull(p, o);
+            }
+            return to_dict(s);
+        },
+        nb::arg("polygon"), nb::kw_only(), nb::arg("seed") = 0, nb::arg("threads") = 1u);
 
     m.def(
         "exact_convex_skull",

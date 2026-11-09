@@ -73,4 +73,13 @@ namespace potato_peeling {
                           internal::refinement::refine(searched, start, opt).polygon);
     }
 
+    Skull convex_skull(const Polygon &p, const ConvexSkullOptions &options) {
+        ApproximateOptions approximate;
+        approximate.seed = options.seed;
+        approximate.threads = options.threads;
+        RefineOptions refinement;
+        refinement.adjoin_rounds = 8;
+        return refine(p, approximate_convex_skull(p, approximate).polygon, refinement);
+    }
+
 }  // namespace potato_peeling

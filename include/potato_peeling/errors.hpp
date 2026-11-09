@@ -1,6 +1,6 @@
 #pragma once
 
-// Exceptions thrown by the library. This header includes no CGAL.
+// Exceptions thrown by the library.
 
 #include <stdexcept>
 
