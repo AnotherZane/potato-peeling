@@ -19,6 +19,12 @@ namespace potato_peeling {
         unsigned threads = 0;
     };
 
+    // How approximate_convex_skull gets A(P), a lower bound on the skull's area
+    // that sets its sample sizes (a smaller A(P) means larger samples): the area of
+    // mesh_convex_skull, or of the largest triangle on P's vertices inside P
+    // (O(n^3) exact visibility tests, slower on large polygons).
+    enum class LowerBound { aronov, vertex_triangle };
+
     // With sample_scale = s_scale = 1 and no max_edges, approximate_convex_skull
     // is the paper's (1 - epsilon)-approximation with failure probability delta;
     // the defaults are far smaller, and the answer is certified but carries no
@@ -31,6 +37,7 @@ namespace potato_peeling {
         double s_scale = 3e-2;                      // scale of |S_ab|; 1 = the paper's size
         std::optional<std::size_t> max_edges = 64;  // nullopt = search every edge
         unsigned threads = 0;
+        LowerBound lower_bound = LowerBound::aronov;
     };
 
     // upper_bound: the search stops once within rel_tol * area(P) (as the nearest

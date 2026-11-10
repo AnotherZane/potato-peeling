@@ -110,7 +110,7 @@ namespace potato_peeling::internal::cabello {
         if (tri.empty()) return res;
 
         // Line 1.
-        const double A = a_bound(cleaned);
+        const double A = a_bound(cleaned, opt.lower_bound);
         if (A <= 0.0) return res;
         // U = area(P) replaces the paper's C2*A(P). Every use of C2*A(P) only needs
         // an upper bound on A*(P), and area(P) is one, so C2 becomes U/A(P).

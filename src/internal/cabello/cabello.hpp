@@ -14,6 +14,7 @@
 #include <string>
 
 #include "internal/common.hpp"
+#include "potato_peeling/options.hpp"
 
 namespace potato_peeling::internal::cabello {
 
@@ -50,6 +51,9 @@ namespace potato_peeling::internal::cabello {
 
         // 0 = every hardware thread.
         unsigned threads = 1;
+
+        // How line 1 gets A(P).
+        LowerBound lower_bound = LowerBound::aronov;
     };
 
     struct Result {

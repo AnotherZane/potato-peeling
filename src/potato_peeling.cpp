@@ -59,6 +59,7 @@ namespace potato_peeling {
         opt.s_scale = options.s_scale;
         opt.max_edges = options.max_edges;
         opt.threads = options.threads;
+        opt.lower_bound = options.lower_bound;
         const internal::cabello::Result res = internal::cabello::large_potato(clean, opt);
         if (!res.convex || !res.contained)
             throw certification_error("approximate_convex_skull: " + res.message);

@@ -37,7 +37,8 @@ namespace potato_peeling::internal::cabello {
         return CGAL::to_double(best);
     }
 
-    double a_bound(const Polygon &p) {
+    double a_bound(const Polygon &p, const LowerBound choice) {
+        if (choice == LowerBound::vertex_triangle) return largest_vertex_triangle(p);
         // Aronov's convex skull is a convex subset of P, so a lower bound on A*(P).
         const Polygon skull = aronov::convex_skull(p);
         if (skull.size() < 3) return largest_vertex_triangle(p);

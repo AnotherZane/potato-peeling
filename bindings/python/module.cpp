@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <optional>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 
 #include <nanobind/nanobind.h>
@@ -97,8 +98,15 @@ NB_MODULE(_core, m) {
         "approximate_convex_skull",
         [](const pp::Polygon &p, const double epsilon, const double delta, const std::uint64_t seed,
            const double sample_scale, const double s_scale,
-           const std::optional<std::size_t> max_edges, const unsigned threads) {
+           const std::optional<std::size_t> max_edges, const unsigned threads,
+           const std::string &lower_bound) {
             pp::ApproximateOptions o;
+            if (lower_bound == "aronov")
+                o.lower_bound = pp::LowerBound::aronov;
+            else if (lower_bound == "vertex_triangle")
+                o.lower_bound = pp::LowerBound::vertex_triangle;
+            else
+                throw std::invalid_argument("lower_bound: 'aronov' or 'vertex_triangle'");
             o.epsilon = epsilon;
             o.delta = delta;
             o.seed = seed;
@@ -115,7 +123,8 @@ NB_MODULE(_core, m) {
         },
         nb::arg("polygon"), nb::kw_only(), nb::arg("epsilon") = 0.1, nb::arg("delta") = 1.0 / 3.0,
         nb::arg("seed") = 0, nb::arg("sample_scale") = 3e-4, nb::arg("s_scale") = 3e-2,
-        nb::arg("max_edges").none() = std::size_t{64}, nb::arg("threads") = 0u);
+        nb::arg("max_edges").none() = std::size_t{64}, nb::arg("threads") = 0u,
+        nb::arg("lower_bound") = "aronov");
 
     m.def(
         "upper_bound",
