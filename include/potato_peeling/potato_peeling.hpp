@@ -48,6 +48,10 @@ namespace potato_peeling {
     POTATO_PEELING_EXPORT Skull refine(const Polygon &p, const Polygon &start,
                                        const RefineOptions &options = {});
 
+    // A certified upper bound on the area of P's convex skull: pivot, two-pivot
+    // and width relaxations, computed exactly. A convex P returns area(P).
+    POTATO_PEELING_EXPORT FT upper_bound(const Polygon &p, const UpperBoundOptions &options = {});
+
     // ── The same methods for polygons over another CGAL kernel ──────────────
 
     template <class K, class C,
@@ -79,6 +83,12 @@ namespace potato_peeling {
     Skull approximate_convex_skull(const CGAL::Polygon_2<K, C> &p,
                                    const ApproximateOptions &options = {}) {
         return approximate_convex_skull(to_polygon(p), options);
+    }
+
+    template <class K, class C,
+              class = std::enable_if_t<!std::is_same_v<CGAL::Polygon_2<K, C>, Polygon>>>
+    FT upper_bound(const CGAL::Polygon_2<K, C> &p, const UpperBoundOptions &options = {}) {
+        return upper_bound(to_polygon(p), options);
     }
 
     template <class K1, class C1, class K2, class C2,

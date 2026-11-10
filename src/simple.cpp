@@ -1,10 +1,8 @@
 #include "potato_peeling/simple.hpp"
 
 #include <cmath>
-#include <cstdint>
-#include <cstring>
-#include <limits>
 
+#include "internal/geometry.hpp"
 #include "potato_peeling/potato_peeling.hpp"
 
 namespace potato_peeling::simple {
@@ -19,39 +17,13 @@ namespace potato_peeling::simple {
             return out;
         }
 
-        // The double nearest to v, ties to even. CGAL's approximation of an exact
-        // value is within an ulp or so; step while a neighbour is exactly closer.
-        double nearest(const FT &v) {
-            CGAL::exact(v);
-            double d = CGAL::to_double(v);
-            const auto distance = [&](const double x) { return CGAL::abs(FT(x) - v); };
-            for (const double toward : {std::numeric_limits<double>::infinity(),
-                                        -std::numeric_limits<double>::infinity()}) {
-                for (;;) {
-                    const double next = std::nextafter(d, toward);
-                    if (!std::isfinite(next)) break;
-                    const CGAL::Comparison_result c = CGAL::compare(distance(next), distance(d));
-                    if (c == CGAL::SMALLER) {
-                        d = next;
-                    } else {
-                        if (c == CGAL::EQUAL) {
-                            std::uint64_t bits;
-                            std::memcpy(&bits, &d, sizeof bits);
-                            if (bits & 1) d = next;
-                        }
-                        break;
-                    }
-                }
-            }
-            return d;
-        }
-
         SimpleSkull to_simple(const Skull &s) {
             SimpleSkull out;
             out.polygon.reserve(s.polygon.size());
             for (const Point &v : s.polygon)
-                out.polygon.push_back({nearest(v.x()), nearest(v.y())});
-            out.area = nearest(s.area);
+                out.polygon.push_back(
+                    {internal::nearest_double(v.x()), internal::nearest_double(v.y())});
+            out.area = internal::nearest_double(s.area);
             return out;
         }
     }  // namespace
@@ -76,6 +48,12 @@ namespace potato_peeling::simple {
 
     SimpleSkull approximate_convex_skull(const Ring &p, const ApproximateOptions &options) {
         return to_simple(potato_peeling::approximate_convex_skull(to_exact(p), options));
+    }
+
+    double upper_bound(const Ring &p, const UpperBoundOptions &options) {
+        const FT bound = potato_peeling::upper_bound(to_exact(p), options);
+        const double d = internal::nearest_double(bound);
+        return FT(d) < bound ? std::nextafter(d, HUGE_VAL) : d;
     }
 
     SimpleSkull refine(const Ring &p, const Ring &start, const RefineOptions &options) {

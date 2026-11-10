@@ -61,6 +61,7 @@ add_library(potato_peeling_core OBJECT
         src/internal/cabello/a_bound.cpp
         src/internal/cabello/cabello.cpp
         src/internal/refinement/refinement.cpp
+        src/internal/bounds/upper_bound.cpp
 )
 target_include_directories(potato_peeling_core
         PUBLIC
@@ -69,6 +70,11 @@ target_include_directories(potato_peeling_core
         PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_compile_features(potato_peeling_core PUBLIC cxx_std_17)
 target_link_libraries(potato_peeling_core PUBLIC CGAL::CGAL PRIVATE Boost::headers CDT::CDT)
+# The upper bound's double-precision search must round the same everywhere.
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    set_source_files_properties(src/internal/bounds/upper_bound.cpp
+            PROPERTIES COMPILE_OPTIONS "-ffp-contract=off")
+endif ()
 target_compile_definitions(potato_peeling_core PRIVATE
         # Fail the build if any GPL-licensed CGAL package is included.
         CGAL_LICENSE_ERROR

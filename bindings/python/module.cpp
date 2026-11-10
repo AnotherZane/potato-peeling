@@ -118,6 +118,25 @@ NB_MODULE(_core, m) {
         nb::arg("max_edges").none() = std::size_t{64}, nb::arg("threads") = 0u);
 
     m.def(
+        "upper_bound",
+        [](const pp::Polygon &p, const double rel_tol, const unsigned pairs,
+           const unsigned width_dirs, const unsigned edge_samples) {
+            pp::UpperBoundOptions o;
+            o.rel_tol = rel_tol;
+            o.pairs = pairs;
+            o.width_dirs = width_dirs;
+            o.edge_samples = edge_samples;
+            pp::FT b;
+            {
+                nb::gil_scoped_release release;
+                b = pp::upper_bound(p, o);
+            }
+            return rational(b);
+        },
+        nb::arg("polygon"), nb::kw_only(), nb::arg("rel_tol") = 1e-3, nb::arg("pairs") = 6u,
+        nb::arg("width_dirs") = 180u, nb::arg("edge_samples") = 0u);
+
+    m.def(
         "refine",
         [](const pp::Polygon &p, const pp::Polygon &start, const unsigned max_sweeps,
            const unsigned rot_steps, const double rot_span, const unsigned split_steps,

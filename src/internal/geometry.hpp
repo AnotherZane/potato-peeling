@@ -27,6 +27,13 @@ namespace potato_peeling::internal {
     // One flag per vertex: true at reflex corners, for either orientation.
     std::vector<bool> reflex_vertices_flags(const Polygon &polygon);
 
+    // Convex hull of a point set: CCW, without collinear points, starting at the
+    // lexicographically smallest point (Andrew's monotone chain).
+    std::vector<Point> convex_hull(std::vector<Point> pts);
+
+    // The double nearest to v, ties to even (as Python's float(Fraction)).
+    double nearest_double(const FT &v);
+
     // Removes every vertex lying on the segment between its neighbours.
     void remove_collinear_vertices(Polygon &polygon);
 

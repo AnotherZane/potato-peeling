@@ -33,6 +33,21 @@ namespace potato_peeling {
         unsigned threads = 0;
     };
 
+    // upper_bound: the search stops once within rel_tol * area(P) (as the nearest
+    // fraction with denominator <= 10^9); `pairs` pivots are paired for the
+    // two-pivot bound (0 = none); width_dirs uniform slice directions are tried
+    // besides P's edge directions; edge_samples adds pivots inside each edge. The
+    // caps bound the work per pivot and per pair: stopping early loosens the
+    // bound but never makes it invalid.
+    struct UpperBoundOptions {
+        double rel_tol = 1e-3;
+        unsigned pairs = 6;
+        unsigned width_dirs = 180;
+        unsigned edge_samples = 0;
+        std::size_t max_evals_1d = 200000;
+        std::size_t max_evals_2d = 4000;
+    };
+
     struct RefineOptions {
         unsigned max_sweeps = 12;
         unsigned rot_steps = 9;

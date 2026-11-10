@@ -2,6 +2,12 @@
 
 #include <CDT.h>
 
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
+#include <cstring>
+#include <limits>
+
 namespace potato_peeling::internal {
     std::vector<bool> reflex_vertices_flags(const Polygon &polygon) {
         const std::size_t n = polygon.size();
@@ -22,6 +28,52 @@ namespace potato_peeling::internal {
         }
 
         return reflex_flags;
+    }
+
+    std::vector<Point> convex_hull(std::vector<Point> pts) {
+        std::sort(pts.begin(), pts.end());
+        pts.erase(std::unique(pts.begin(), pts.end()), pts.end());
+        if (pts.size() < 3) return pts;
+        std::vector<Point> h;
+        const auto add = [&h](const std::size_t base, const Point &q) {
+            while (h.size() >= base + 2
+                   && CGAL::orientation(h[h.size() - 2], h.back(), q) != CGAL::LEFT_TURN)
+                h.pop_back();
+            h.push_back(q);
+        };
+        for (const auto &q : pts) add(0, q);
+        h.pop_back();
+        const std::size_t upper = h.size();
+        for (auto it = pts.rbegin(); it != pts.rend(); ++it) add(upper, *it);
+        h.pop_back();
+        return h;
+    }
+
+    double nearest_double(const FT &v) {
+        // Within an ulp of v whatever the lazy approximation holds. Each step below
+        // must get strictly closer, so it ends; out of range, inf is the answer.
+        double d = CGAL::to_double(CGAL::exact(v));
+        if (!std::isfinite(d)) return d;
+        const auto distance = [&](const double x) { return CGAL::abs(FT(x) - v); };
+        for (const double toward :
+             {std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity()}) {
+            for (;;) {
+                const double next = std::nextafter(d, toward);
+                if (!std::isfinite(next)) break;
+                const CGAL::Comparison_result c = CGAL::compare(distance(next), distance(d));
+                if (c == CGAL::SMALLER) {
+                    d = next;
+                } else {
+                    if (c == CGAL::EQUAL) {
+                        std::uint64_t bits;
+                        std::memcpy(&bits, &d, sizeof bits);
+                        if (bits & 1) d = next;
+                    }
+                    break;
+                }
+            }
+        }
+        return d;
     }
 
     void remove_collinear_vertices(Polygon &polygon) {

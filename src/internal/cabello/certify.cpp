@@ -6,6 +6,8 @@
 
 #include <CGAL/intersections.h>
 
+#include "internal/geometry.hpp"
+
 namespace potato_peeling::internal::cabello {
     namespace {
         // Parameter of q along the ray a -> b, scaled by |b-a|^2 so it stays
@@ -14,24 +16,6 @@ namespace potato_peeling::internal::cabello {
             return (q - a) * d;
         }
 
-        // Andrew's monotone chain on lexicographically sorted, distinct points: CCW,
-        // collinear points dropped, starting at the smallest point.
-        std::vector<Point> convex_hull(const std::vector<Point> &pts) {
-            if (pts.size() < 3) return pts;
-            std::vector<Point> h;
-            const auto add = [&h](const std::size_t base, const Point &q) {
-                while (h.size() >= base + 2
-                       && CGAL::orientation(h[h.size() - 2], h.back(), q) != CGAL::LEFT_TURN)
-                    h.pop_back();
-                h.push_back(q);
-            };
-            for (const auto &q : pts) add(0, q);
-            h.pop_back();
-            const std::size_t upper = h.size();
-            for (auto it = pts.rbegin(); it != pts.rend(); ++it) add(upper, *it);
-            h.pop_back();
-            return h;
-        }
     }  // namespace
 
     bool point_in_polygon(const Polygon &p, const Point &a) {
