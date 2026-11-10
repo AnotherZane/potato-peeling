@@ -42,6 +42,8 @@ namespace potato_peeling::simple {
                                                                const ApproximateOptions &options
                                                                = {});
 
+    POTATO_PEELING_EXPORT SimpleSkull vertex_convex_skull(const Ring &p);
+
     // The exact bound rounded up, so it stays an upper bound.
     POTATO_PEELING_EXPORT double upper_bound(const Ring &p, const UpperBoundOptions &options = {});
 

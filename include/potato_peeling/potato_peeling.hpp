@@ -48,6 +48,11 @@ namespace potato_peeling {
     POTATO_PEELING_EXPORT Skull refine(const Polygon &p, const Polygon &start,
                                        const RefineOptions &options = {});
 
+    // The largest convex polygon in P whose vertices are vertices of P: a lower
+    // bound on the skull, never below mesh_convex_skull(p). Fischer;
+    // Bautista-Santiago et al. O(n^3 log n).
+    POTATO_PEELING_EXPORT Skull vertex_convex_skull(const Polygon &p);
+
     // A certified upper bound on the area of P's convex skull: pivot, two-pivot
     // and width relaxations, computed exactly. A convex P returns area(P).
     POTATO_PEELING_EXPORT FT upper_bound(const Polygon &p, const UpperBoundOptions &options = {});
@@ -83,6 +88,12 @@ namespace potato_peeling {
     Skull approximate_convex_skull(const CGAL::Polygon_2<K, C> &p,
                                    const ApproximateOptions &options = {}) {
         return approximate_convex_skull(to_polygon(p), options);
+    }
+
+    template <class K, class C,
+              class = std::enable_if_t<!std::is_same_v<CGAL::Polygon_2<K, C>, Polygon>>>
+    Skull vertex_convex_skull(const CGAL::Polygon_2<K, C> &p) {
+        return vertex_convex_skull(to_polygon(p));
     }
 
     template <class K, class C,

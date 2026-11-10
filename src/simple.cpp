@@ -50,6 +50,10 @@ namespace potato_peeling::simple {
         return to_simple(potato_peeling::approximate_convex_skull(to_exact(p), options));
     }
 
+    SimpleSkull vertex_convex_skull(const Ring &p) {
+        return to_simple(potato_peeling::vertex_convex_skull(to_exact(p)));
+    }
+
     double upper_bound(const Ring &p, const UpperBoundOptions &options) {
         const FT bound = potato_peeling::upper_bound(to_exact(p), options);
         const double d = internal::nearest_double(bound);

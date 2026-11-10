@@ -127,6 +127,18 @@ NB_MODULE(_core, m) {
         nb::arg("lower_bound") = "aronov");
 
     m.def(
+        "vertex_convex_skull",
+        [](const pp::Polygon &p) {
+            pp::Skull s;
+            {
+                nb::gil_scoped_release release;
+                s = pp::vertex_convex_skull(p);
+            }
+            return to_dict(s);
+        },
+        nb::arg("polygon"));
+
+    m.def(
         "upper_bound",
         [](const pp::Polygon &p, const double rel_tol, const unsigned pairs,
            const unsigned width_dirs, const unsigned edge_samples) {

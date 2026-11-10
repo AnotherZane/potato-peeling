@@ -7,6 +7,7 @@
 #include "internal/bounds/upper_bound.hpp"
 #include "internal/cabello/cabello.hpp"
 #include "internal/cabello/certify.hpp"
+#include "internal/cabello/vertex_skull.hpp"
 #include "internal/chang_and_yap/chang_and_yap.hpp"
 #include "internal/geometry.hpp"
 #include "internal/refinement/refinement.hpp"
@@ -79,6 +80,12 @@ namespace potato_peeling {
         opt.adjoin_rounds = options.adjoin_rounds;
         return make_skull("refine", clean,
                           internal::refinement::refine(searched, start, opt).polygon);
+    }
+
+    Skull vertex_convex_skull(const Polygon &p) {
+        const Polygon clean = internal::clean_polygon(p);
+        return make_skull("vertex_convex_skull", clean,
+                          internal::cabello::vertex_convex_skull(clean));
     }
 
     FT upper_bound(const Polygon &p, const UpperBoundOptions &options) {
