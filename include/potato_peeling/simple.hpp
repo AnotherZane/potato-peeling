@@ -27,10 +27,10 @@ namespace potato_peeling::simple {
                                                    const ConvexSkullOptions &options = {});
 
     POTATO_PEELING_EXPORT SimpleSkull exact_convex_skull(const Ring &p,
-                                                         const ExactOptions &options = {});
+                                                         const BaseOptions &options = {});
 
     POTATO_PEELING_EXPORT SimpleSkull mesh_convex_skull(const Ring &p,
-                                                        const MeshOptions &options = {});
+                                                        const BaseOptions &options = {});
 
     // As potato_peeling::Mesh.
     struct Mesh {
@@ -39,14 +39,14 @@ namespace potato_peeling::simple {
     };
 
     POTATO_PEELING_EXPORT SimpleSkull mesh_convex_skull(const Ring &p, const Mesh &mesh,
-                                                        const MeshOptions &options = {});
+                                                        const BaseOptions &options = {});
 
     POTATO_PEELING_EXPORT SimpleSkull approximate_convex_skull(const Ring &p,
                                                                const ApproximateOptions &options
                                                                = {});
 
     POTATO_PEELING_EXPORT SimpleSkull vertex_convex_skull(const Ring &p,
-                                                          const VertexSkullOptions &options = {});
+                                                          const BaseOptions &options = {});
 
     // The exact bound rounded up, so it stays an upper bound.
     POTATO_PEELING_EXPORT double upper_bound(const Ring &p, const UpperBoundOptions &options = {});

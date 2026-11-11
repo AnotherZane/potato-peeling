@@ -28,19 +28,19 @@ namespace potato_peeling {
 
     // Exact optimum. Chang & Yap (1986). Practical up to a few dozen vertices.
     POTATO_PEELING_EXPORT Skull exact_convex_skull(const Polygon &p,
-                                                   const ExactOptions &options = {});
+                                                   const BaseOptions &options = {});
 
     // Optimum among unions of triangles of P's constrained Delaunay
     // triangulation. Aronov, van Kreveld, Löffler & Silveira (2011).
     POTATO_PEELING_EXPORT Skull mesh_convex_skull(const Polygon &p,
-                                                  const MeshOptions &options = {});
+                                                  const BaseOptions &options = {});
 
     // The same over the caller's triangulation of P. Throws invalid_polygon unless
     // the triangles tile P exactly (no gaps, overlaps or T-junctions). A finer mesh
     // can only give a larger answer when it refines the coarser one; time grows
     // steeply with the number of triangles.
     POTATO_PEELING_EXPORT Skull mesh_convex_skull(const Polygon &p, const Mesh &mesh,
-                                                  const MeshOptions &options = {});
+                                                  const BaseOptions &options = {});
 
     // Randomised approximation. Cabello, Cibulka, Kynčl, Saumell & Valtr (2017).
     POTATO_PEELING_EXPORT Skull approximate_convex_skull(const Polygon &p,
@@ -55,7 +55,7 @@ namespace potato_peeling {
     // bound on the skull, never below mesh_convex_skull(p). Fischer;
     // Bautista-Santiago et al. O(n^3 log n).
     POTATO_PEELING_EXPORT Skull vertex_convex_skull(const Polygon &p,
-                                                    const VertexSkullOptions &options = {});
+                                                    const BaseOptions &options = {});
 
     // A certified upper bound on the area of P's convex skull: pivot, two-pivot
     // and width relaxations, computed exactly. A convex P returns area(P).
@@ -71,20 +71,20 @@ namespace potato_peeling {
 
     template <class K, class C,
               class = std::enable_if_t<!std::is_same_v<CGAL::Polygon_2<K, C>, Polygon>>>
-    Skull exact_convex_skull(const CGAL::Polygon_2<K, C> &p, const ExactOptions &options = {}) {
+    Skull exact_convex_skull(const CGAL::Polygon_2<K, C> &p, const BaseOptions &options = {}) {
         return exact_convex_skull(to_polygon(p), options);
     }
 
     template <class K, class C,
               class = std::enable_if_t<!std::is_same_v<CGAL::Polygon_2<K, C>, Polygon>>>
-    Skull mesh_convex_skull(const CGAL::Polygon_2<K, C> &p, const MeshOptions &options = {}) {
+    Skull mesh_convex_skull(const CGAL::Polygon_2<K, C> &p, const BaseOptions &options = {}) {
         return mesh_convex_skull(to_polygon(p), options);
     }
 
     template <class K, class C,
               class = std::enable_if_t<!std::is_same_v<CGAL::Polygon_2<K, C>, Polygon>>>
     Skull mesh_convex_skull(const CGAL::Polygon_2<K, C> &p, const Mesh &mesh,
-                            const MeshOptions &options = {}) {
+                            const BaseOptions &options = {}) {
         return mesh_convex_skull(to_polygon(p), mesh, options);
     }
 
@@ -97,8 +97,7 @@ namespace potato_peeling {
 
     template <class K, class C,
               class = std::enable_if_t<!std::is_same_v<CGAL::Polygon_2<K, C>, Polygon>>>
-    Skull vertex_convex_skull(const CGAL::Polygon_2<K, C> &p,
-                              const VertexSkullOptions &options = {}) {
+    Skull vertex_convex_skull(const CGAL::Polygon_2<K, C> &p, const BaseOptions &options = {}) {
         return vertex_convex_skull(to_polygon(p), options);
     }
 

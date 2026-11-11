@@ -95,7 +95,7 @@ int main() {
 }
 ```
 
-A `Skull` holds the polygon (counter-clockwise, without collinear vertices) and its exact area. Each method also accepts a `CGAL::Polygon_2` over any other CGAL kernel, and takes an options struct (`ConvexSkullOptions`, `ApproximateOptions`, ...) as its last argument.
+A `Skull` holds the polygon (counter-clockwise, without collinear vertices) and its exact area. Each method also accepts a `CGAL::Polygon_2` over any other CGAL kernel, and takes an options struct as its last argument: `BaseOptions` for `exact_convex_skull`, `mesh_convex_skull` and `vertex_convex_skull`, and for the others `ConvexSkullOptions`, `ApproximateOptions`, `RefineOptions` or `UpperBoundOptions`, which extend it.
 
 ### Without CGAL
 
@@ -121,7 +121,7 @@ target_link_libraries(app PRIVATE potato_peeling::potato_peeling)
 
 ### Errors and cancellation
 
-Methods throw `invalid_polygon` (a `std::invalid_argument`) for input that is not a simple polygon, and `certification_error` if a result fails its own check, which would be a bug. Each options struct has a `should_stop` callback, called between units of work; when it returns true the method throws `cancelled`, except `refine`, which returns its answer so far.
+Methods throw `invalid_polygon` (a `std::invalid_argument`) for input that is not a simple polygon, and `certification_error` if a result fails its own check, which would be a bug. `BaseOptions`, and so every options struct, has a `should_stop` callback, called between units of work; when it returns true the method throws `cancelled`, except `refine`, which returns its answer so far.
 
 ## Building
 

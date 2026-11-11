@@ -179,7 +179,7 @@ NB_MODULE(_core, m) {
         [](nb::handle p, const std::optional<double> timeout) {
             const pp::Polygon poly = to_polygon(p);
             return skull_out(run(timeout, [&](const pp::StopCallback &stop) {
-                pp::ExactOptions o;
+                pp::BaseOptions o;
                 o.should_stop = stop;
                 return pp::exact_convex_skull(poly, o);
             }));
@@ -195,7 +195,7 @@ NB_MODULE(_core, m) {
             std::optional<pp::Mesh> mesh;
             if (triangles) mesh = pp::Mesh{to_points(points), *triangles};
             return skull_out(run(timeout, [&](const pp::StopCallback &stop) {
-                pp::MeshOptions o;
+                pp::BaseOptions o;
                 o.should_stop = stop;
                 return mesh ? pp::mesh_convex_skull(poly, *mesh, o)
                             : pp::mesh_convex_skull(poly, o);
@@ -260,7 +260,7 @@ NB_MODULE(_core, m) {
         [](nb::handle p, const std::optional<double> timeout) {
             const pp::Polygon poly = to_polygon(p);
             return skull_out(run(timeout, [&](const pp::StopCallback &stop) {
-                pp::VertexSkullOptions o;
+                pp::BaseOptions o;
                 o.should_stop = stop;
                 return pp::vertex_convex_skull(poly, o);
             }));

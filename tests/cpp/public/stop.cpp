@@ -133,7 +133,7 @@ TEST_CASE("convex_skull stopped while refining returns an answer") {
 
 TEST_CASE("a should_stop that never stops changes nothing") {
     const pp::Polygon p = tp::spiky();
-    const pp::ExactOptions o{[] { return false; }};
+    const pp::BaseOptions o{[] { return false; }};
     CHECK(pp::exact_convex_skull(p, o).area == pp::exact_convex_skull(p).area);
 }
 

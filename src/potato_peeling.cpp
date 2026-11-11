@@ -33,19 +33,19 @@ namespace potato_peeling {
         }
     }  // namespace
 
-    Skull exact_convex_skull(const Polygon &p, const ExactOptions &options) {
+    Skull exact_convex_skull(const Polygon &p, const BaseOptions &options) {
         const Polygon clean = internal::clean_polygon(p);
         return make_skull("exact_convex_skull", clean,
                           internal::chang_and_yap::convex_skull(clean, options.should_stop));
     }
 
-    Skull mesh_convex_skull(const Polygon &p, const MeshOptions &options) {
+    Skull mesh_convex_skull(const Polygon &p, const BaseOptions &options) {
         const Polygon clean = internal::clean_polygon(p);
         return make_skull("mesh_convex_skull", clean,
                           internal::aronov::convex_skull(clean, options.should_stop));
     }
 
-    Skull mesh_convex_skull(const Polygon &p, const Mesh &mesh, const MeshOptions &options) {
+    Skull mesh_convex_skull(const Polygon &p, const Mesh &mesh, const BaseOptions &options) {
         const Polygon clean = internal::clean_polygon(p);
         return make_skull("mesh_convex_skull", clean,
                           internal::aronov::convex_skull(clean, mesh.points, mesh.triangles,
@@ -89,7 +89,7 @@ namespace potato_peeling {
                           internal::refinement::refine(searched, first, opt).polygon);
     }
 
-    Skull vertex_convex_skull(const Polygon &p, const VertexSkullOptions &options) {
+    Skull vertex_convex_skull(const Polygon &p, const BaseOptions &options) {
         const Polygon clean = internal::clean_polygon(p);
         return make_skull("vertex_convex_skull", clean,
                           internal::cabello::vertex_convex_skull(clean, options.should_stop));

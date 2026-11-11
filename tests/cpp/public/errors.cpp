@@ -53,7 +53,7 @@ TEST_CASE("invalid mesh") {
 }
 
 TEST_CASE("cancelled") {
-    const pp::ExactOptions stop{[] { return true; }};
+    const pp::BaseOptions stop{[] { return true; }};
     CHECK_THROWS_AS(pp::exact_convex_skull(tp::comb(), stop), pp::cancelled);
     CHECK_THROWS_AS(pp::exact_convex_skull(tp::comb(), stop), std::runtime_error);
 }

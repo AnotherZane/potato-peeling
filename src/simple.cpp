@@ -32,15 +32,15 @@ namespace potato_peeling::simple {
         return to_simple(potato_peeling::convex_skull(to_exact(p), options));
     }
 
-    SimpleSkull exact_convex_skull(const Ring &p, const ExactOptions &options) {
+    SimpleSkull exact_convex_skull(const Ring &p, const BaseOptions &options) {
         return to_simple(potato_peeling::exact_convex_skull(to_exact(p), options));
     }
 
-    SimpleSkull mesh_convex_skull(const Ring &p, const MeshOptions &options) {
+    SimpleSkull mesh_convex_skull(const Ring &p, const BaseOptions &options) {
         return to_simple(potato_peeling::mesh_convex_skull(to_exact(p), options));
     }
 
-    SimpleSkull mesh_convex_skull(const Ring &p, const Mesh &mesh, const MeshOptions &options) {
+    SimpleSkull mesh_convex_skull(const Ring &p, const Mesh &mesh, const BaseOptions &options) {
         const Polygon points = to_exact(mesh.points);
         return to_simple(potato_peeling::mesh_convex_skull(
             to_exact(p), {{points.vertices_begin(), points.vertices_end()}, mesh.triangles},
@@ -51,7 +51,7 @@ namespace potato_peeling::simple {
         return to_simple(potato_peeling::approximate_convex_skull(to_exact(p), options));
     }
 
-    SimpleSkull vertex_convex_skull(const Ring &p, const VertexSkullOptions &options) {
+    SimpleSkull vertex_convex_skull(const Ring &p, const BaseOptions &options) {
         return to_simple(potato_peeling::vertex_convex_skull(to_exact(p), options));
     }
 
