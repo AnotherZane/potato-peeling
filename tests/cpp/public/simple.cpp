@@ -77,7 +77,8 @@ TEST_CASE("simple results are the exact results rounded to nearest") {
 
 TEST_CASE("simple mesh_convex_skull with a caller's mesh") {
     const ps::Ring square{{0, 0}, {1, 0}, {1, 1}, {0, 1}};
-    const ps::Mesh mesh{{{0, 0}, {1, 0}, {1, 1}, {0, 1}, {0.5, 0}}, {{0, 4, 3}, {4, 1, 2}, {4, 2, 3}}};
+    const ps::Mesh mesh{{{0, 0}, {1, 0}, {1, 1}, {0, 1}, {0.5, 0}},
+                        {{0, 4, 3}, {4, 1, 2}, {4, 2, 3}}};
     CHECK(ps::mesh_convex_skull(square, mesh).area == 1.0);
 }
 

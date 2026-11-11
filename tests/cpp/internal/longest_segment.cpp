@@ -46,7 +46,8 @@ namespace {
                 std::sort(ts.begin(), ts.end());
                 ts.erase(std::unique(ts.begin(), ts.end()), ts.end());
                 const auto inside = [&](std::size_t k) {
-                    return p.bounded_side(o + ((ts[k] + ts[k + 1]) / 2) * d) != CGAL::ON_UNBOUNDED_SIDE;
+                    return p.bounded_side(o + ((ts[k] + ts[k + 1]) / 2) * d)
+                           != CGAL::ON_UNBOUNDED_SIDE;
                 };
                 // every maximal run of consecutive inside intervals
                 std::size_t k = 0;
@@ -70,8 +71,12 @@ namespace {
             const pp::Segment s = pp::longest_segment(p);
             const pp::FT len2 = s.squared_length();
             CHECK(pp::segment_in_polygon(p, s.source(), s.target()));
-            CHECK(p.bounded_side(s.source()) == CGAL::ON_BOUNDARY);
-            CHECK(p.bounded_side(s.target()) == CGAL::ON_BOUNDARY);
+            // compared to bool first: doctest would print a CGAL enum through
+            // whatever operator<< it converts to (on some CGAL/Boost versions
+            // Boost's __float128 one, which needs libquadmath)
+            const bool ends_on_boundary = p.bounded_side(s.source()) == CGAL::ON_BOUNDARY
+                                          && p.bounded_side(s.target()) == CGAL::ON_BOUNDARY;
+            CHECK(ends_on_boundary);
             CHECK(widest(p) == len2);
             const auto on_boundary = [&] {
                 const std::size_t e = gen() % p.size();

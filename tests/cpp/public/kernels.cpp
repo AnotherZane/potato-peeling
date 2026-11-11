@@ -89,7 +89,9 @@ TEST_CASE("Exact_predicates_inexact_constructions_kernel") {
     check_kernel<CGAL::Exact_predicates_inexact_constructions_kernel>();
 }
 
-TEST_CASE("Simple_cartesian<double>") { check_kernel<CGAL::Simple_cartesian<double>>(); }
+TEST_CASE("Simple_cartesian<double>") {
+    check_kernel<CGAL::Simple_cartesian<double>>();
+}
 
 TEST_CASE("Simple_cartesian<Exact_rational>") {
     check_kernel<CGAL::Simple_cartesian<CGAL::Exact_rational>>();

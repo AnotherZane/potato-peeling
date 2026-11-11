@@ -22,11 +22,27 @@ namespace test_polygons {
         return p;
     }
 
-    inline pp::Polygon l_shape() { return make({{0, 0}, {2, 0}, {2, 1}, {1, 1}, {1, 2}, {0, 2}}); }
+    inline pp::Polygon l_shape() {
+        return make({{0, 0}, {2, 0}, {2, 1}, {1, 1}, {1, 2}, {0, 2}});
+    }
 
     inline pp::Polygon comb() {
-        return make({{0, 0}, {7, 0}, {7, 3}, {6, 3}, {6, 1}, {5, 1}, {5, 3}, {4, 3}, {4, 1},
-                     {3, 1}, {3, 3}, {2, 3}, {2, 1}, {1, 1}, {1, 3}, {0, 3}});
+        return make({{0, 0},
+                     {7, 0},
+                     {7, 3},
+                     {6, 3},
+                     {6, 1},
+                     {5, 1},
+                     {5, 3},
+                     {4, 3},
+                     {4, 1},
+                     {3, 1},
+                     {3, 3},
+                     {2, 3},
+                     {2, 1},
+                     {1, 1},
+                     {1, 3},
+                     {0, 3}});
     }
 
     inline pp::Polygon spiky() {
@@ -62,8 +78,7 @@ namespace test_polygons {
             try {
                 const pp::Polygon c = clean(p);
                 if (!c.is_convex() && c.size() <= max_size) out.push_back(c);
-            } catch (const std::invalid_argument &) {
-            }
+            } catch (const std::invalid_argument &) {}
         }
         return out;
     }
