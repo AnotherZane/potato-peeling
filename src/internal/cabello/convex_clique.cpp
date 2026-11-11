@@ -2,6 +2,9 @@
 #include "internal/cabello/kernel.hpp"
 
 #include <algorithm>
+#include <cstdlib>
+#include <memory>
+#include <new>
 #include <vector>
 
 namespace potato_peeling::internal::cabello {
@@ -93,9 +96,16 @@ namespace potato_peeling::internal::cabello {
 
         const Pt &sp = h.point(s);
 
-        std::vector<double> opt(n * n, 0.0);
-        std::vector<char> has(n * n, 0);
-        std::vector<std::size_t> parent(n * n, NONE);
+        // n x n tables, n in the thousands at the paper's sample sizes. Only `has`
+        // must start zeroed: opt and parent are read only where has is set. calloc
+        // gets zeroed pages lazily from the OS, so neither filling nor memory is
+        // paid for entries never touched.
+        const std::unique_ptr<double[]> opt(new double[n * n]);
+        const std::unique_ptr<std::size_t[]> parent(new std::size_t[n * n]);
+        const std::unique_ptr<char, decltype(&std::free)> has_block(
+            static_cast<char *>(std::calloc(n * n, 1)), &std::free);
+        if (!has_block) throw std::bad_alloc();
+        char *const has = has_block.get();
 
         // Per-i scratch: the arrivals h < i with x_h x_i in E(H), sorted by the
         // angle of x_i - x_h, with their Opt[h,i] values.
