@@ -10,19 +10,17 @@
 #include <utility>
 #include <vector>
 
-#include <boost/multiprecision/cpp_int.hpp>
-
 #include "internal/geometry.hpp"
 
-// The search makes its decisions in doubles exactly as research/reproduce/
-// upper_bound.py did (Python's float(Fraction), %, round, math.pi, heapq order,
-// stable sorts), so it explores in the same order as the thesis run; only the
-// areas differ, being exact here. None of the double arithmetic can make the
-// result invalid: every quantity that enters a slack term is rounded up.
+// The search makes its decisions (angles, sectors, rankings) in doubles and
+// evaluates areas exactly. None of the double arithmetic can make the result
+// invalid: every quantity that enters a slack term is rounded up. Ties in the
+// heaps and sorts are broken by a total order, so the result does not depend on
+// the standard library.
 
 namespace potato_peeling::internal::bounds {
     namespace {
-        constexpr double PI_D = 3.141592653589793;  // math.pi
+        constexpr double PI_D = 3.141592653589793;  // π rounded to a double
         constexpr double TAU = 2.0 * PI_D;
 
         // Widens every angular gap. A sample at nominal angle t uses the rounded
@@ -30,76 +28,15 @@ namespace potato_peeling::internal::bounds {
         // this the gap, and so the slack, could be understated by that much.
         const FT ANG_EPS = FT(1) / (FT(1000000) * FT(1000000));  // 1/10^12
 
-        // A non-negative integer as FT, 30 bits at a time (FT has no constructor
-        // from a big integer).
-        FT to_ft(boost::multiprecision::cpp_int v) {
-            FT out(0), place(1);
-            const boost::multiprecision::cpp_int mask = (1 << 30) - 1;
-            while (v != 0) {
-                out += place * FT(static_cast<int>(v & mask));
-                place *= FT(1 << 30);
-                v >>= 30;
-            }
-            return out;
+        // An angle in [0, 2π] (2π itself only by rounding a tiny negative angle).
+        double wrap_angle(const double a) {
+            const double m = std::fmod(a, TAU);
+            return m < 0.0 ? m + TAU : m;
         }
 
-        // Python's float %: fmod, shifted to the divisor's sign; +0.0 for zero.
-        double pymod(const double x, const double y) {
-            double m = std::fmod(x, y);
-            if (m != 0.0) {
-                if ((y < 0.0) != (m < 0.0)) m += y;
-            } else {
-                m = std::copysign(0.0, y);
-            }
-            return m;
-        }
-
-        // Python's Fraction(x).limit_denominator(max_den): the fraction closest to
-        // the double x with denominator at most max_den. The tolerance is computed
-        // this way because the thesis's was: rel_tol = 1e-3 becomes exactly 1/1000,
-        // not the binary value of the double 0.001.
-        //
-        // As CPython does it: write |x| = num/den exactly, then walk its continued
-        // fraction. The convergents p1/q1 are the best approximations with small
-        // denominators; stop before the next one's denominator exceeds max_den. The
-        // answer is then p1/q1 or the semiconvergent (p0 + k p1)/(q0 + k q1) with the
-        // largest k that fits, whichever is closer.
-        FT limit_denominator(const double x, const int max_den) {
-            using boost::multiprecision::cpp_int;
-            int exp = 0;
-            const double mant = std::frexp(std::abs(x), &exp);           // |x| = mant * 2^exp
-            cpp_int num = static_cast<long long>(std::ldexp(mant, 53));  // exact: 53 bits
-            cpp_int den = 1;
-            exp -= 53;
-            if (exp > 0)
-                num <<= exp;
-            else
-                den <<= -exp;
-            const cpp_int g = gcd(num, den);
-            num /= g;
-            den /= g;
-            const auto ratio
-                = [](const cpp_int &n, const cpp_int &d) { return to_ft(n) / to_ft(d); };
-            const FT sign(x < 0 ? -1 : 1);
-            if (den <= max_den) return sign * ratio(num, den);
-            cpp_int p0 = 0, q0 = 1, p1 = 1, q1 = 0, n = num, d = den;
-            for (;;) {
-                const cpp_int a = n / d;  // next continued-fraction term
-                const cpp_int q2 = q0 + a * q1;
-                if (q2 > max_den) break;
-                const cpp_int p2 = p0 + a * p1;
-                p0 = p1;
-                q0 = q1;
-                p1 = p2;
-                q1 = q2;
-                const cpp_int r = n - a * d;
-                n = d;
-                d = r;
-            }
-            const cpp_int k = (max_den - q0) / q1;
-            const FT ax = FT(std::abs(x));
-            const FT semi = ratio(p0 + k * p1, q0 + k * q1), conv = ratio(p1, q1);
-            return sign * (CGAL::abs(conv - ax) <= CGAL::abs(semi - ax) ? conv : semi);
+        // A double within an ulp of v, for steering the search.
+        double approx(const FT &v) {
+            return CGAL::to_double(CGAL::exact(v));
         }
 
         FT shoelace(const std::vector<Point> &pts) {
@@ -174,16 +111,15 @@ namespace potato_peeling::internal::bounds {
         public:
             RadialBound(const std::vector<Point> &pts, const Point &u, const int nsec = 256)
                 : nsec_(nsec), sec_(static_cast<std::size_t>(nsec), 0.0) {
-                const double glob = nearest_double(max_radius_sq(pts, u));
+                const double glob = approx(max_radius_sq(pts, u));
                 const std::vector<Point> hull = convex_hull(pts);
-                const double ux = nearest_double(u.x()), uy = nearest_double(u.y());
+                const double ux = approx(u.x()), uy = approx(u.y());
                 // hull half-planes n.x <= c, outward normals (hull is CCW)
                 std::vector<std::array<double, 3>> hp;
                 for (std::size_t i = 0; i < hull.size(); ++i) {
                     const Point &a = hull[i], &b = hull[(i + 1) % hull.size()];
                     const FT nx = b.y() - a.y(), ny = a.x() - b.x();
-                    hp.push_back({nearest_double(nx), nearest_double(ny),
-                                  nearest_double(nx * a.x() + ny * a.y())});
+                    hp.push_back({approx(nx), approx(ny), approx(nx * a.x() + ny * a.y())});
                 }
                 const auto ray_exit_sq = [&](const double th) {
                     const double dx = std::cos(th), dy = std::sin(th);
@@ -203,11 +139,11 @@ namespace potato_peeling::internal::bounds {
                     return any ? best * best : glob;
                 };
                 for (const Point &v : hull) {
-                    const double dx = nearest_double(v.x() - u.x());
-                    const double dy = nearest_double(v.y() - u.y());
+                    const double dx = approx(v.x() - u.x());
+                    const double dy = approx(v.y() - u.y());
                     if (dx == 0.0 && dy == 0.0) continue;
                     const auto k = static_cast<std::size_t>(static_cast<long>(
-                                       pymod(std::atan2(dy, dx), TAU) / TAU * nsec_))
+                                       wrap_angle(std::atan2(dy, dx)) / TAU * nsec_))
                                    % sec_.size();
                     sec_[k] = std::max(sec_[k], dx * dx + dy * dy);
                 }
@@ -227,8 +163,8 @@ namespace potato_peeling::internal::bounds {
                 if (span >= PI_D) return *std::max_element(sec_.begin(), sec_.end());
                 double best = 0.0;
                 for (const double base : {a1, a1 + PI_D}) {
-                    const long k0 = static_cast<long>(pymod(base, TAU) / TAU * nsec_);
-                    const long k1 = static_cast<long>(pymod(base + span, TAU) / TAU * nsec_);
+                    const long k0 = static_cast<long>(wrap_angle(base) / TAU * nsec_);
+                    const long k1 = static_cast<long>(wrap_angle(base + span) / TAU * nsec_);
                     for (long k = k0;; ++k) {
                         best = std::max(best, sec_[static_cast<std::size_t>(k % nsec_)]);
                         if (k % nsec_ == k1 % nsec_) break;
@@ -270,10 +206,10 @@ namespace potato_peeling::internal::bounds {
             std::set<double> seeds;
             for (const Point &v : pts) {
                 if (v == u) continue;
-                const double a = pymod(
-                    std::atan2(nearest_double(v.y() - u.y()), nearest_double(v.x() - u.x())), TAU);
+                const double a
+                    = wrap_angle(std::atan2(approx(v.y() - u.y()), approx(v.x() - u.x())));
                 seeds.insert(a);
-                seeds.insert(pymod(a + PI_D, TAU));
+                seeds.insert(wrap_angle(a + PI_D));
             }
             for (int k = 0; k < 32; ++k) seeds.insert(TAU * k / 32);
             std::vector<double> grid(seeds.begin(), seeds.end());
@@ -293,8 +229,7 @@ namespace potato_peeling::internal::bounds {
                       return (alo + ahi + L * (FT(hi) - FT(lo) + ANG_EPS)) / FT(2);
                   };
 
-            // The largest bound first; ties broken as Python's heapq did on the tuple
-            // (-bound, t1, t2, a1, a2), so ties resolve as in the thesis run.
+            // The largest bound first; ties broken by (t1, t2, a1, a2).
             using Item = std::tuple<FT, double, double, FT, FT>;
             const auto later = [](const Item &x, const Item &y) {
                 if (std::get<0>(x) != std::get<0>(y)) return std::get<0>(x) < std::get<0>(y);
@@ -362,8 +297,7 @@ namespace potato_peeling::internal::bounds {
                 return std::min(fv[0] + fv[3], fv[1] + fv[2]) / FT(2) + slack / FT(2);
             };
 
-            // The largest bound first, ties as Python's heapq did on
-            // (-bound, a1, a2, b1, b2, values).
+            // The largest bound first; ties broken by (a1, a2, b1, b2, values).
             using Item = std::tuple<FT, double, double, double, double, std::array<FT, 4>>;
             const auto later = [](const Item &x, const Item &y) {
                 if (std::get<0>(x) != std::get<0>(y)) return std::get<0>(x) < std::get<0>(y);
@@ -538,14 +472,12 @@ namespace potato_peeling::internal::bounds {
             if (dirs.empty()) return CGAL::abs(shoelace(pts));
 
             std::vector<std::array<double, 2>> fpts;
-            for (const Point &v : pts)
-                fpts.push_back({nearest_double(v.x()), nearest_double(v.y())});
+            for (const Point &v : pts) fpts.push_back({approx(v.x()), approx(v.y())});
             std::vector<std::pair<double, std::size_t>> scored;
             for (std::size_t i = 0; i < dirs.size(); ++i) {
                 check_stop(stop);
-                scored.emplace_back(width_float(fpts, nearest_double(dirs[i].first),
-                                                nearest_double(dirs[i].second)),
-                                    i);
+                scored.emplace_back(
+                    width_float(fpts, approx(dirs[i].first), approx(dirs[i].second)), i);
             }
             std::stable_sort(scored.begin(), scored.end(),
                              [](const auto &x, const auto &y) { return x.first < y.first; });
@@ -587,7 +519,7 @@ namespace potato_peeling::internal::bounds {
             }
         }
 
-        const FT tol_abs = area_p * limit_denominator(options.rel_tol, 1000000000);
+        const FT tol_abs = area_p * FT(options.rel_tol);
         FT best = area_p;
         std::vector<FT> samples;
         for (const Point &u : pivots) {
@@ -604,7 +536,7 @@ namespace potato_peeling::internal::bounds {
             std::stable_sort(
                 order.begin(), order.end(),
                 [&](const std::size_t a, const std::size_t b) { return samples[a] < samples[b]; });
-            // pairs = 1 still pairs the best two, as the thesis's script did.
+            // pairs = 1 still pairs the best two (one pivot makes no pair).
             const std::size_t m = std::min<std::size_t>(order.size(), std::max(2u, options.pairs));
             for (std::size_t x = 0; x < m; ++x)
                 for (std::size_t y = x + 1; y < m; ++y)

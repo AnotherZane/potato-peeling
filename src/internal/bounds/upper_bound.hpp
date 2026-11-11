@@ -18,9 +18,7 @@
 // segment perpendicular to w (Q*'s slice is one interval inside one segment).
 //
 // Areas are exact; only the search angles are doubles, and every term entering
-// the slack is rounded so that the slack is never understated. The search
-// follows research/reproduce/upper_bound.py (the thesis's), with its areas
-// computed exactly.
+// the slack is rounded so that the slack is never understated.
 
 #include <cstddef>
 
@@ -29,7 +27,7 @@
 namespace potato_peeling::internal::bounds {
 
     struct Options {
-        double rel_tol = 1e-3;      // stop once within rel_tol * area(P); as p/q, q <= 10^9
+        double rel_tol = 1e-3;      // stop once within rel_tol * area(P)
         unsigned edge_samples = 0;  // extra pivots per edge
         unsigned pairs = 6;         // two-pivot bound over this many pivots; 0 = none
         unsigned width_dirs = 180;  // uniform directions added to the edge directions
