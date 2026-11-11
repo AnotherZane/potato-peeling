@@ -53,7 +53,7 @@ namespace potato_peeling::internal::cabello {
         unsigned threads = 1;
 
         // How line 1 gets A(P).
-        LowerBound lower_bound = LowerBound::aronov;
+        LowerBound lower_bound = LowerBound::vertex_triangle;
 
         // Called only from the calling thread, between edges and iterations.
         StopFn should_stop;

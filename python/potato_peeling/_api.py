@@ -134,15 +134,17 @@ def mesh_convex_skull(polygon, mesh: Optional[Union[Mesh, Tuple[Sequence[Point],
 def approximate_convex_skull(polygon, *, epsilon: float = 0.1, delta: float = 1 / 3,
                              seed: int = 0, sample_scale: float = 3e-4, s_scale: float = 3e-2,
                              max_edges: Optional[int] = 64, threads: int = 0,
-                             lower_bound: str = "aronov",
+                             lower_bound: str = "vertex_triangle",
                              timeout: Optional[float] = None) -> Skull:
     """Randomised approximation (Cabello, Cibulka, Kynčl, Saumell & Valtr 2017).
     With sample_scale = s_scale = 1 and max_edges=None it is the paper's
     (1 - epsilon)-approximation with failure probability delta; the defaults
     are far smaller, and the answer is certified but carries no such bound.
 
-    lower_bound: how A(P), which sets the sample sizes, is found: "aronov"
-    (mesh_convex_skull's area) or "vertex_triangle".
+    lower_bound: how A(P), which sets the sample sizes, is found:
+    "vertex_triangle" (the largest triangle on P's vertices inside P; the
+    default, better and faster on the whole) or "aronov" (mesh_convex_skull's
+    area).
     """
     return _skull(_core.approximate_convex_skull(
         _ring(polygon), epsilon, delta, seed, sample_scale, s_scale, max_edges, threads,
