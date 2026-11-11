@@ -108,10 +108,14 @@ namespace potato_peeling::internal::cabello {
     PointGraph visibility_graph(const VisibilityOracle &oracle, const std::vector<Pt> &points,
                                 const StopFn &stop) {
         PointGraph g(points);
+        // A row is |points| visibility tests, seconds at the paper's sample sizes,
+        // so poll within rows too.
+        std::size_t tests = 0;
         for (std::size_t i = 0; i < points.size(); ++i) {
-            if (stop && stop()) return g;
-            for (std::size_t j = i + 1; j < points.size(); ++j)
+            for (std::size_t j = i + 1; j < points.size(); ++j) {
+                if (stop && tests++ % 1024 == 0 && stop()) return g;
                 if (oracle.visible(points[i], points[j])) g.add_edge(i, j);
+            }
         }
         return g;
     }

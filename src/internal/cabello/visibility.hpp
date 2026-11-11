@@ -51,7 +51,7 @@ namespace potato_peeling::internal::cabello {
     };
 
     // G(P, points) [C17 p2]. O(|points|^2 log n). Returns early, incomplete, once
-    // `stop` returns true (polled once per point); the caller discards it.
+    // `stop` returns true (polled every 1024 tests); the caller discards it.
     PointGraph visibility_graph(const VisibilityOracle &oracle, const std::vector<Pt> &points,
                                 const StopFn &stop = {});
 
