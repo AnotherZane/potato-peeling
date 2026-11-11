@@ -37,7 +37,7 @@ Every answer is a convex polygon inside P, checked exactly before it is returned
 
 ## Python
 
-Python 3.9 or later.
+Python 3.10 or later.
 
 ### Quick start
 
