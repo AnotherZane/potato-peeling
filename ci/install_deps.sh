@@ -22,9 +22,10 @@ GMP_SHA=a3c2b80201b89e68616f4ad30bc66aee4927c3ce50e33929ca819d5c43538898
 MPFR_URL=https://ftp.gnu.org/gnu/mpfr/mpfr-4.2.2.tar.xz
 MPFR_SHA=b67ba0383ef7e8a8563734e2e889ef5ec3c3b898a01d00fa0a6869ad81c6ce01
 
-# fetch URL SHA256: download into WORK, check, unpack, print the directory
+# fetch URL SHA256: download into WORK, check the hash, unpack into WORK
 fetch() {
-    local file="$WORK/$(basename "$1")"
+    local file
+    file="$WORK/$(basename "$1")"
     curl -fsSL --retry 3 -o "$file" "$1"
     local sum
     if command -v sha256sum >/dev/null; then sum=$(sha256sum "$file" | cut -d' ' -f1)
@@ -52,16 +53,24 @@ cmake --install "$WORK/cgal-build" >/dev/null
 
 if [ "$(uname)" = Darwin ]; then
     : "${MACOSX_DEPLOYMENT_TARGET:?set MACOSX_DEPLOYMENT_TARGET}"
-    # --enable-fat: code for every x86_64 CPU, chosen at run time, not just the
-    # build machine's.
-    FAT=""
-    [ "$(uname -m)" = x86_64 ] && FAT=--enable-fat
+    # A generic --build, so GMP does not tune for the build machine's CPU; on x86_64
+    # --enable-fat adds code for every CPU, chosen at run time.
+    DARWIN="apple-darwin$(uname -r | cut -d. -f1)"
+    if [ "$(uname -m)" = x86_64 ]; then GMP_ARGS=(--build="x86_64-$DARWIN" --enable-fat)
+    else GMP_ARGS=(--build="aarch64-$DARWIN"); fi
     fetch "$GMP_URL" "$GMP_SHA"
-    (cd "$WORK/gmp-6.3.0" && ./configure --prefix="$PREFIX" --disable-static $FAT >/dev/null \
-        && make -j"$JOBS" >/dev/null && make install >/dev/null)
+    # make check: GMP's own advice, as compilers do miscompile it.
+    (cd "$WORK/gmp-6.3.0" && ./configure --prefix="$PREFIX" --disable-static "${GMP_ARGS[@]}" \
+        >/dev/null && make -j"$JOBS" >/dev/null && make -j"$JOBS" check >/dev/null \
+        && make install >/dev/null)
     fetch "$MPFR_URL" "$MPFR_SHA"
     (cd "$WORK/mpfr-4.2.2" && ./configure --prefix="$PREFIX" --disable-static \
         --with-gmp="$PREFIX" >/dev/null && make -j"$JOBS" >/dev/null && make install >/dev/null)
+    # GMP 6.3.0's libtool links with -flat_namespace when it misreads the macOS
+    # version; make sure it did not.
+    for lib in "$PREFIX"/lib/libgmp.dylib "$PREFIX"/lib/libmpfr.dylib; do
+        otool -hv "$lib" | grep -q TWOLEVEL || { echo "$lib: flat namespace" >&2; exit 1; }
+    done
 elif command -v dnf >/dev/null; then
     dnf install -y -q gmp-devel mpfr-devel
 elif command -v yum >/dev/null; then

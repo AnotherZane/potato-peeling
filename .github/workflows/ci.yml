@@ -10,6 +10,10 @@ on:
 permissions:
   contents: read
 
+env:
+  # uv's own Python, which has the headers the extension builds against
+  UV_PYTHON_PREFERENCE: only-managed
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -48,7 +52,7 @@ jobs:
           cmake --build build/ci -j "$(nproc)"
           ctest --test-dir build/ci -LE slow --output-on-failure
       - if: matrix.python
-        uses: astral-sh/setup-uv@v10
+        uses: astral-sh/setup-uv@v10.3.3
       - if: matrix.python
         name: Python tests
         run: |
@@ -67,7 +71,7 @@ jobs:
           cmake -S . -B build/ci -DCMAKE_BUILD_TYPE=Release
           cmake --build build/ci -j "$(sysctl -n hw.ncpu)"
           ctest --test-dir build/ci -LE slow --output-on-failure
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.3.3
       - name: Python tests
         run: |
           uv sync

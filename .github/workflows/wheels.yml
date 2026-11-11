@@ -36,7 +36,7 @@ jobs:
           else
             python3 ci/check_version.py
           fi
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.3.3
       - run: uv build --sdist
       - uses: actions/upload-artifact@v7
         with:
