@@ -87,21 +87,23 @@ def test_sigint_in_a_subprocess():
 
 
 def test_gil_released():
+    # While a 2 s solve runs in another thread, the main thread keeps running
+    # Python: about 100-200 10 ms sleeps even on a slow runner. Were the GIL held,
+    # it would be stuck for the whole solve and count 0 or 1.
     def solve():
         try:
-            pp.exact_convex_skull(SLOW, timeout=1.0)
+            pp.exact_convex_skull(SLOW, timeout=2.0)
         except TimeoutError:
             pass
 
     worker = threading.Thread(target=solve)
     worker.start()
-    time.sleep(0.1)
     ticks = 0
     while worker.is_alive():
         ticks += 1
-        time.sleep(0.001)
+        time.sleep(0.01)
     worker.join()
-    assert ticks > 100
+    assert ticks >= 20
 
 
 def test_parallel_calls_agree():
