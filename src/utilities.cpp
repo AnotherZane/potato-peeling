@@ -4,6 +4,7 @@
 
 #include "internal/cabello/certify.hpp"
 #include "internal/geometry.hpp"
+#include "internal/longest_segment.hpp"
 
 namespace potato_peeling {
     namespace {
@@ -28,6 +29,13 @@ namespace potato_peeling {
             if (CGAL::orientation(ring[t[0]], ring[t[1]], ring[t[2]]) == CGAL::CLOCKWISE)
                 std::swap(t[1], t[2]);
         return triangles;
+    }
+
+    Segment longest_segment(const Polygon &p) {
+        Segment s = internal::longest_segment(internal::clean_polygon(p));
+        s.source().exact();
+        s.target().exact();
+        return s;
     }
 
     std::vector<bool> reflex_vertices(const Polygon &p) {

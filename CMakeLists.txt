@@ -45,6 +45,7 @@ endif ()
 # The library, the Python module and the tests all link these objects.
 add_library(potato_peeling_core OBJECT
         src/internal/geometry.cpp
+        src/internal/longest_segment.cpp
         src/potato_peeling.cpp
         src/utilities.cpp
         src/simple.cpp

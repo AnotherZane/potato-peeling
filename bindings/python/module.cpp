@@ -17,6 +17,7 @@
 
 #include "casters.hpp"
 #include "potato_peeling/potato_peeling.hpp"
+#include "potato_peeling/utilities.hpp"
 
 namespace nb = nanobind;
 namespace pp = potato_peeling;
@@ -135,6 +136,20 @@ NB_MODULE(_core, m) {
                 s = pp::vertex_convex_skull(p);
             }
             return to_dict(s);
+        },
+        nb::arg("polygon"));
+
+    m.def(
+        "longest_segment",
+        [](const pp::Polygon &p) {
+            pp::Segment s;
+            {
+                nb::gil_scoped_release release;
+                s = pp::longest_segment(p);
+            }
+            return nb::make_tuple(
+                nb::make_tuple(rational(s.source().x()), rational(s.source().y())),
+                nb::make_tuple(rational(s.target().x()), rational(s.target().y())));
         },
         nb::arg("polygon"));
 
