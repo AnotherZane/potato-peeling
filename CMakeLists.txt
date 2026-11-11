@@ -22,6 +22,11 @@ include(GNUInstallDirs)
 include(GenerateExportHeader)
 include(CMakePackageConfigHelpers)
 
+# CGAL's exact rational, and so FT, is GMP's mpq_class when GMP's C++ interface
+# is linked and Boost.Multiprecision's GMP rational otherwise. FT is part of the
+# API, and refine's double-steered search can differ between the two in the last
+# bits, so every build uses the second (and nothing links libgmpxx).
+set(CGAL_WITH_GMPXX OFF CACHE BOOL "Use GMP's C++ classes in CGAL; must be OFF for potato_peeling" FORCE)
 find_package(CGAL 5.4 REQUIRED)
 find_package(Boost 1.74 CONFIG REQUIRED)
 

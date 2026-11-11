@@ -24,9 +24,6 @@ cmake.build-type = "Release"
 # Install only our module, not the install rules of dependencies built from source (CDT).
 install.components = ["python"]
 build-dir = "build/{wheel_tag}"
-# CGAL links GMP's C++ interface when it finds it; we do not use it, so wheels
-# need not bundle libgmpxx.
-cmake.define = { CGAL_WITH_GMPXX = "OFF" }
 sdist.exclude = ["build/"]
 
 [dependency-groups]
