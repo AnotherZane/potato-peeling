@@ -356,7 +356,8 @@ namespace potato_peeling::internal::chang_and_yap {
                                       const std::vector<bool> &reflex_flags);
 
     std::vector<Chord> generate_extremal_chords(const Polygon &polygon,
-                                                const std::vector<bool> &reflex_flags);
+                                                const std::vector<bool> &reflex_flags,
+                                                const StopFn &stop);
 
     bool is_admissible_pair(const Chord &c, const Chord &c_prime, const std::size_t &n);
 
@@ -373,7 +374,8 @@ namespace potato_peeling::internal::chang_and_yap {
                                                  const std::vector<bool> &reflex_flags);
 
     void compute_A_matrix_all_stages(AMatrix &A, const std::vector<Chord> &Xi, const Polygon &poly,
-                                     const std::vector<bool> &reflex_flags, std::size_t n_vertices);
+                                     const std::vector<bool> &reflex_flags, std::size_t n_vertices,
+                                     const StopFn &stop);
 
     Vector chord_dir(const Chord &c, const Polygon &poly);
 
@@ -393,7 +395,8 @@ namespace potato_peeling::internal::chang_and_yap {
 
     void compute_M_stage_1(MMatrix &M, const std::vector<Chord> &Xi,
                            const std::vector<std::vector<std::size_t>> &Xi_by_vertex,
-                           const Polygon &poly, const std::vector<bool> &reflex_flags);
+                           const Polygon &poly, const std::vector<bool> &reflex_flags,
+                           const StopFn &stop);
 
     void compute_M_stage_s(MMatrix &M, const AMatrix &A, const std::vector<Chord> &Xi,
                            const std::vector<std::vector<std::size_t>> &Xi_by_vertex,
@@ -406,6 +409,7 @@ namespace potato_peeling::internal::chang_and_yap {
                                const Polygon &poly, const std::vector<bool> &reflex_flags,
                                std::size_t a, std::size_t b);
 
-    // The convex skull of a cleaned polygon (clean_polygon), CCW.
-    Polygon convex_skull(const Polygon &polygon);
+    // The convex skull of a cleaned polygon (clean_polygon), CCW. Checks `stop`
+    // per vertex while generating chords, and per row or stage of A and M.
+    Polygon convex_skull(const Polygon &polygon, const StopFn &stop);
 }  // namespace potato_peeling::internal::chang_and_yap

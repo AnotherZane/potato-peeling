@@ -216,12 +216,18 @@ namespace potato_peeling::internal::refinement {
 
         const double c_hi_span = pad * pad * 8.0;  // generous "no constraint" offset
 
-        for (unsigned sweep = 0; sweep < opts.max_sweeps; ++sweep) {
+        bool stopped = false;
+        const auto stop_now = [&] {
+            if (!stopped && opts.should_stop && opts.should_stop()) stopped = true;
+            return stopped;
+        };
+
+        for (unsigned sweep = 0; sweep < opts.max_sweeps && !stop_now(); ++sweep) {
             bool improved = false;
             std::vector<bool> pinned_edge;
             pinned_edge.reserve(hp.size());
 
-            for (std::size_t i = 0; i < hp.size(); ++i) {
+            for (std::size_t i = 0; i < hp.size() && !stop_now(); ++i) {
                 const double norm = std::sqrt(approx(hp[i].a * hp[i].a + hp[i].b * hp[i].b));
                 const double c_now = approx(hp[i].c);
 
@@ -275,13 +281,14 @@ namespace potato_peeling::internal::refinement {
             // ---- SPLIT: replace one edge with two, each pushed ---------------
             //
             // See Options::split_steps.
-            if (opts.split_steps && hp.size() < hp_cap) {
+            if (opts.split_steps && hp.size() < hp_cap && !stopped) {
                 const std::size_t n_before = hp.size();
                 // `i` walks the current hp, `orig` the edges before this pass
                 // (which pinned_edge indexes). They diverge once a split is
                 // accepted, so `i` is advanced explicitly.
                 std::size_t i = 0;
-                for (std::size_t orig = 0; orig < n_before && hp.size() < hp_cap; ++orig, ++i) {
+                for (std::size_t orig = 0; orig < n_before && hp.size() < hp_cap && !stop_now();
+                     ++orig, ++i) {
                     // Only pinned edges are worth splitting; an edge the push just
                     // advanced was not at its limit.
                     if (orig < pinned_edge.size() && !pinned_edge[orig]) continue;
@@ -348,9 +355,9 @@ namespace potato_peeling::internal::refinement {
             // certify call each. Runs after split, because it rebuilds the
             // half-plane list and would invalidate pinned_edge.
             if (opts.adjoin_rounds) {
-                for (unsigned round = 0; round < opts.adjoin_rounds; ++round) {
+                for (unsigned round = 0; round < opts.adjoin_rounds && !stopped; ++round) {
                     bool gained = false;
-                    for (std::size_t vi = 0; vi < poly.size(); ++vi) {
+                    for (std::size_t vi = 0; vi < poly.size() && !stop_now(); ++vi) {
                         if (hp.size() >= hp_cap) break;
                         const Point &v = poly[vi];
                         // already a vertex of Q: the hull would be unchanged

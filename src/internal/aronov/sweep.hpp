@@ -16,13 +16,14 @@ namespace potato_peeling::internal::aronov::sweep {
     // opens between the two, and are reported when the earlier edge ends.
     //
     // Returned sorted by min X(e, e'), ties by pair.
-    std::vector<EdgePair> promising_pairs(const Mesh &mesh);
+    std::vector<EdgePair> promising_pairs(const Mesh &mesh, const StopFn &stop);
 
     // §2.2 (p356-357): the Q-values, via opp() and prefix maxima instead of scanning
     // every candidate. Uses Mesh::bottom_prefix_len / top_suffix_begin, whose
     // run-contiguity is what makes Observation 1's lookup legitimate.
-    QTable q_table(const Mesh &mesh, const std::vector<EdgePair> &promising);
+    QTable q_table(const Mesh &mesh, const std::vector<EdgePair> &promising, const StopFn &stop);
 
-    // promising_pairs, then q_table, then the best pair reconstructed.
-    MeshedSkull solve(const Mesh &mesh);
+    // promising_pairs, then q_table, then the best pair reconstructed. Checks
+    // `stop` once per sweep vertex.
+    MeshedSkull solve(const Mesh &mesh, const StopFn &stop);
 }  // namespace potato_peeling::internal::aronov::sweep

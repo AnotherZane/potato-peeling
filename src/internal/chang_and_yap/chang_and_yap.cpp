@@ -313,7 +313,8 @@ namespace potato_peeling::internal::chang_and_yap {
     }
 
     std::vector<Chord> generate_extremal_chords(const Polygon &polygon,
-                                                const std::vector<bool> &reflex_flags) {
+                                                const std::vector<bool> &reflex_flags,
+                                                const StopFn &stop) {
         const std::size_t n = polygon.size();
 
         // Chords are oriented (p173), but building one does not depend on its
@@ -322,6 +323,7 @@ namespace potato_peeling::internal::chang_and_yap {
         std::vector<std::optional<std::pair<Point, Point>>> solved(n * n);
 
         for (std::size_t i = 0; i < n; ++i) {
+            check_stop(stop);
             for (std::size_t j = i + 1; j < n; ++j) {
                 // O(1) necessary condition, before the O(n) test below:
                 // [v_i,v_j] cannot leave P at its own endpoints, so v_j - v_i
@@ -1335,8 +1337,8 @@ namespace potato_peeling::internal::chang_and_yap {
     // total — Section 6
     void compute_A_matrix_all_stages(AMatrix &A, const std::vector<Chord> &Xi, const Polygon &poly,
                                      const std::vector<bool> &reflex_flags,
-                                     const std::size_t n_vertices)  // vertex count — stage bound
-    {
+                                     const std::size_t n_vertices,  // vertex count — stage bound
+                                     const StopFn &stop) {
         const std::size_t N = Xi.size();
 
         // Memoized critical parameters for the Lemma 8 equivalence checks,
@@ -1363,6 +1365,7 @@ namespace potato_peeling::internal::chang_and_yap {
             // iterate all triples (C, C'', C')
             // — Section 6
             for (std::size_t a = 0; a < N; a++) {
+                check_stop(stop);
                 for (std::size_t b = 0; b < N; b++) {
                     if (!is_admissible_pair(Xi[a], Xi[b], poly.size())) continue;
 
@@ -1557,10 +1560,12 @@ namespace potato_peeling::internal::chang_and_yap {
     // positive CCW); the recursion depends on the sign.
     void compute_M_stage_1(MMatrix &M, const std::vector<Chord> &Xi,
                            const std::vector<std::vector<std::size_t>> &Xi_by_vertex,
-                           const Polygon &poly, const std::vector<bool> &reflex_flags) {
+                           const Polygon &poly, const std::vector<bool> &reflex_flags,
+                           const StopFn &stop) {
         const std::size_t n = poly.size();
 
         for (std::size_t i = 0; i < n; i++) {
+            check_stop(stop);
             const std::size_t j = (i + 1) % n;
 
             for (const std::size_t a : Xi_by_vertex[i]) {
@@ -1938,7 +1943,7 @@ namespace potato_peeling::internal::chang_and_yap {
     }
 #pragma endregion
 
-    Polygon convex_skull(const Polygon &polygon) {
+    Polygon convex_skull(const Polygon &polygon, const StopFn &stop) {
         Polygon poly = polygon;
         if (poly.is_clockwise_oriented()) poly.reverse_orientation();
 
@@ -1948,7 +1953,7 @@ namespace potato_peeling::internal::chang_and_yap {
 
         // Steps 1-2: Ξ_i = {C_{i,j} | C_{i,j} is defined}, the extremal chords
         // from corner v_i; Xi is their union.
-        const std::vector<Chord> Xi = generate_extremal_chords(poly, reflex_flags);
+        const std::vector<Chord> Xi = generate_extremal_chords(poly, reflex_flags, stop);
 
         const std::size_t N = Xi.size();
 
@@ -1963,6 +1968,7 @@ namespace potato_peeling::internal::chang_and_yap {
         // "It is easy by a brute force method to compute all the (C_0, C_1)-chains
         // of lengths 0 or 1 in time O(n^6)."
         for (std::size_t a = 0; a < N; a++) {
+            check_stop(stop);
             for (std::size_t b = 0; b < N; b++) {
                 // Step 4: skip pairs that are not admissible.
                 if (!is_admissible_pair(Xi[a], Xi[b], poly.size())) continue;
@@ -1988,7 +1994,7 @@ namespace potato_peeling::internal::chang_and_yap {
         }
 
         // Step 6
-        compute_A_matrix_all_stages(A, Xi, poly, reflex_flags, poly.size());
+        compute_A_matrix_all_stages(A, Xi, poly, reflex_flags, poly.size(), stop);
 
         // M(C,C'): the maximum area of admissible (C,C')-chains (Section 6); an
         // absent key is -inf.
@@ -2001,10 +2007,11 @@ namespace potato_peeling::internal::chang_and_yap {
         for (std::size_t idx = 0; idx < Xi.size(); idx++) Xi_by_vertex[Xi[idx].i].push_back(idx);
 
         // Stage s = 1, the base case (Section 6).
-        compute_M_stage_1(M, Xi, Xi_by_vertex, poly, reflex_flags);
+        compute_M_stage_1(M, Xi, Xi_by_vertex, poly, reflex_flags, stop);
 
         // Stages s = 2..n-1 (Section 6).
         for (std::size_t s = 2; s < poly.size(); s++) {
+            check_stop(stop);
             compute_M_stage_s(M, A, Xi, Xi_by_vertex, poly, s);
         }
 

@@ -35,6 +35,7 @@ namespace potato_peeling::internal::bounds {
         unsigned width_dirs = 180;  // uniform directions added to the edge directions
         std::size_t max_evals_1d = 200000;
         std::size_t max_evals_2d = 4000;
+        StopFn should_stop;  // checked per sample, split and width direction
     };
 
     struct Result {

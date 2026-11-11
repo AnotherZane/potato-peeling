@@ -11,6 +11,7 @@
 #endif
 
 #include "potato_peeling/errors.hpp"
+#include "potato_peeling/options.hpp"
 #include "potato_peeling/types.hpp"
 
 namespace potato_peeling::internal {
@@ -19,6 +20,14 @@ namespace potato_peeling::internal {
     using Line = Kernel::Line_2;
     using Direction = Kernel::Direction_2;
     using Aff_transformation = CGAL::Aff_transformation_2<Kernel>;
+
+    // The caller's should_stop; may be empty.
+    using StopFn = StopCallback;
+
+    // Called between units of work: throws cancelled once should_stop is true.
+    inline void check_stop(const StopFn &stop) {
+        if (stop && stop()) throw cancelled("stopped by should_stop");
+    }
 
     // The alternative T of an intersection result, or nullptr. CGAL 6 returns a
     // std::variant, CGAL 5 a boost::variant.

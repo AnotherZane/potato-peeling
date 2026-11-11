@@ -21,4 +21,10 @@ namespace potato_peeling {
         using std::logic_error::logic_error;
     };
 
+    // The caller's should_stop returned true.
+    class POTATO_PEELING_EXPORT cancelled : public std::runtime_error {
+    public:
+        using std::runtime_error::runtime_error;
+    };
+
 }  // namespace potato_peeling

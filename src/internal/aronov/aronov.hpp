@@ -61,13 +61,13 @@ namespace potato_peeling::internal::aronov {
     SkullCheck check_skull(const Mesh &mesh, const MeshedSkull &skull);
 
     // Largest-area convex subpolygon of M that is a union of triangles (Theorem 1).
-    MeshedSkull largest_convex_subpolygon(const Mesh &mesh);
+    MeshedSkull largest_convex_subpolygon(const Mesh &mesh, const StopFn &stop);
 
     // The largest convex union of triangles of P's default mesh, for a cleaned
     // polygon (clean_polygon). A convex P is returned as is.
-    Polygon convex_skull(const Polygon &polygon);
+    Polygon convex_skull(const Polygon &polygon, const StopFn &stop);
 
     // The same over a caller's triangulation of P (build_mesh's checks).
     Polygon convex_skull(const Polygon &polygon, const std::vector<Point> &points,
-                         std::vector<std::array<std::size_t, 3>> triangles);
+                         std::vector<std::array<std::size_t, 3>> triangles, const StopFn &stop);
 }  // namespace potato_peeling::internal::aronov

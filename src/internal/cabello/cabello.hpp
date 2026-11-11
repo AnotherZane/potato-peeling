@@ -54,6 +54,9 @@ namespace potato_peeling::internal::cabello {
 
         // How line 1 gets A(P).
         LowerBound lower_bound = LowerBound::aronov;
+
+        // Called only from the calling thread, between edges and iterations.
+        StopFn should_stop;
     };
 
     struct Result {

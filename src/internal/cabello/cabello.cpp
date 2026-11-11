@@ -110,7 +110,7 @@ namespace potato_peeling::internal::cabello {
         if (tri.empty()) return res;
 
         // Line 1.
-        const double A = a_bound(cleaned, opt.lower_bound);
+        const double A = a_bound(cleaned, opt.lower_bound, opt.should_stop);
         if (A <= 0.0) return res;
         // U = area(P) replaces the paper's C2*A(P). Every use of C2*A(P) only needs
         // an upper bound on A*(P), and area(P) is one, so C2 becomes U/A(P).
@@ -138,6 +138,7 @@ namespace potato_peeling::internal::cabello {
         std::vector<Pt> best_points;
 
         for (std::size_t it = 0; it < iterations; ++it) {
+            check_stop(opt.should_stop);
 
             // Line 5.
             auto gen_r = substream(opt.seed, Stream::SampleR, it);
@@ -167,29 +168,34 @@ namespace potato_peeling::internal::cabello {
                 edges.resize(*opt.max_edges);
             }
 
-            // Lines 8-14.
+            // Lines 8-14. The calling thread works alongside threads - 1 others and
+            // is the only one that calls should_stop; the others see `stopped`.
             std::vector<EdgeResult> per_edge(edges.size());
             const unsigned threads
                 = opt.threads ? opt.threads : std::max(1u, std::thread::hardware_concurrency());
-            if (threads == 1) {
-                for (std::size_t e = 0; e < edges.size(); ++e)
+            std::atomic<std::size_t> next{0};
+            std::atomic<bool> stopped{false};
+            const auto work = [&](const bool caller) {
+                for (;;) {
+                    if (caller && opt.should_stop && opt.should_stop()) stopped = true;
+                    if (stopped) return;
+                    const std::size_t e = next.fetch_add(1);
+                    if (e >= edges.size()) return;
                     per_edge[e] = search_edge(opt, oracle, R[edges[e].first], R[edges[e].second], U,
                                               r_ab, s_ab, it, e);
-            } else {
-                std::vector<std::thread> pool;
-                std::atomic<std::size_t> next{0};
-                for (unsigned t = 0; t < threads; ++t) {
-                    pool.emplace_back([&] {
-                        for (;;) {
-                            const std::size_t e = next.fetch_add(1);
-                            if (e >= edges.size()) return;
-                            per_edge[e] = search_edge(opt, oracle, R[edges[e].first],
-                                                      R[edges[e].second], U, r_ab, s_ab, it, e);
-                        }
-                    });
                 }
+            };
+            std::vector<std::thread> pool;
+            for (unsigned t = 1; t < threads; ++t) pool.emplace_back(work, false);
+            try {
+                work(true);
+            } catch (...) {
+                stopped = true;
                 for (auto &th : pool) th.join();
+                throw;
             }
+            for (auto &th : pool) th.join();
+            if (stopped) throw cancelled("stopped by should_stop");
 
             // Reduce in index order; strict > keeps the earliest edge on a tie.
             for (std::size_t e = 0; e < per_edge.size(); ++e) {

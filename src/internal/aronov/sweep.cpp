@@ -141,7 +141,7 @@ namespace potato_peeling::internal::aronov::sweep {
         };
     }  // namespace
 
-    std::vector<EdgePair> promising_pairs(const Mesh &mesh) {
+    std::vector<EdgePair> promising_pairs(const Mesh &mesh, const StopFn &stop) {
         const std::size_t ne = mesh.num_edges();
         Status status(ne);
         PairLists lists(ne);
@@ -200,6 +200,7 @@ namespace potato_peeling::internal::aronov::sweep {
 
         // Vertices are stored in x-order, which is the sweep order.
         for (std::size_t v = 0; v < mesh.num_vertices(); ++v) {
+            check_stop(stop);
             const auto &el = mesh.vertex_left_edges[v];  // topmost first
             const auto &er = mesh.vertex_right_edges[v];
 
@@ -297,7 +298,7 @@ namespace potato_peeling::internal::aronov::sweep {
         });
         return reported;
     }
-    QTable q_table(const Mesh &mesh, const std::vector<EdgePair> &promising) {
+    QTable q_table(const Mesh &mesh, const std::vector<EdgePair> &promising, const StopFn &stop) {
         QTable q;
         q.reserve(promising.size());
 
@@ -320,6 +321,7 @@ namespace potato_peeling::internal::aronov::sweep {
         boost::unordered_map<std::size_t, Prefix> tables;
 
         for (std::size_t v = 0; v < mesh.num_vertices(); ++v) {
+            check_stop(stop);
             if (by_vertex[v].empty()) continue;
             const auto &el = mesh.vertex_left_edges[v];  // topmost first
 
@@ -410,9 +412,9 @@ namespace potato_peeling::internal::aronov::sweep {
         return q;
     }
 
-    MeshedSkull solve(const Mesh &mesh) {
-        const std::vector<EdgePair> promising = promising_pairs(mesh);
-        const QTable q = q_table(mesh, promising);
+    MeshedSkull solve(const Mesh &mesh, const StopFn &stop) {
+        const std::vector<EdgePair> promising = promising_pairs(mesh, stop);
+        const QTable q = q_table(mesh, promising, stop);
 
         const std::optional<EdgePair> winner = best_pair(mesh, q);
         if (!winner) return {};

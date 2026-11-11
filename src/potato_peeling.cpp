@@ -33,21 +33,23 @@ namespace potato_peeling {
         }
     }  // namespace
 
-    Skull exact_convex_skull(const Polygon &p) {
+    Skull exact_convex_skull(const Polygon &p, const ExactOptions &options) {
         const Polygon clean = internal::clean_polygon(p);
         return make_skull("exact_convex_skull", clean,
-                          internal::chang_and_yap::convex_skull(clean));
+                          internal::chang_and_yap::convex_skull(clean, options.should_stop));
     }
 
-    Skull mesh_convex_skull(const Polygon &p) {
-        const Polygon clean = internal::clean_polygon(p);
-        return make_skull("mesh_convex_skull", clean, internal::aronov::convex_skull(clean));
-    }
-
-    Skull mesh_convex_skull(const Polygon &p, const Mesh &mesh) {
+    Skull mesh_convex_skull(const Polygon &p, const MeshOptions &options) {
         const Polygon clean = internal::clean_polygon(p);
         return make_skull("mesh_convex_skull", clean,
-                          internal::aronov::convex_skull(clean, mesh.points, mesh.triangles));
+                          internal::aronov::convex_skull(clean, options.should_stop));
+    }
+
+    Skull mesh_convex_skull(const Polygon &p, const Mesh &mesh, const MeshOptions &options) {
+        const Polygon clean = internal::clean_polygon(p);
+        return make_skull("mesh_convex_skull", clean,
+                          internal::aronov::convex_skull(clean, mesh.points, mesh.triangles,
+                                                         options.should_stop));
     }
 
     Skull approximate_convex_skull(const Polygon &p, const ApproximateOptions &options) {
@@ -61,6 +63,7 @@ namespace potato_peeling {
         opt.max_edges = options.max_edges;
         opt.threads = options.threads;
         opt.lower_bound = options.lower_bound;
+        opt.should_stop = options.should_stop;
         const internal::cabello::Result res = internal::cabello::large_potato(clean, opt);
         if (!res.convex || !res.contained)
             throw certification_error("approximate_convex_skull: " + res.message);
@@ -78,14 +81,15 @@ namespace potato_peeling {
         opt.rot_span = options.rot_span;
         opt.split_steps = options.split_steps;
         opt.adjoin_rounds = options.adjoin_rounds;
+        opt.should_stop = options.should_stop;
         return make_skull("refine", clean,
                           internal::refinement::refine(searched, start, opt).polygon);
     }
 
-    Skull vertex_convex_skull(const Polygon &p) {
+    Skull vertex_convex_skull(const Polygon &p, const VertexSkullOptions &options) {
         const Polygon clean = internal::clean_polygon(p);
         return make_skull("vertex_convex_skull", clean,
-                          internal::cabello::vertex_convex_skull(clean));
+                          internal::cabello::vertex_convex_skull(clean, options.should_stop));
     }
 
     FT upper_bound(const Polygon &p, const UpperBoundOptions &options) {
@@ -96,6 +100,7 @@ namespace potato_peeling {
         opt.edge_samples = options.edge_samples;
         opt.max_evals_1d = options.max_evals_1d;
         opt.max_evals_2d = options.max_evals_2d;
+        opt.should_stop = options.should_stop;
         FT bound = internal::bounds::upper_bound(internal::clean_polygon(p), opt).bound;
         CGAL::exact(bound);
         return bound;
@@ -105,8 +110,10 @@ namespace potato_peeling {
         ApproximateOptions approximate;
         approximate.seed = options.seed;
         approximate.threads = options.threads;
+        approximate.should_stop = options.should_stop;
         RefineOptions refinement;
         refinement.adjoin_rounds = 8;
+        refinement.should_stop = options.should_stop;
         return refine(p, approximate_convex_skull(p, approximate).polygon, refinement);
     }
 

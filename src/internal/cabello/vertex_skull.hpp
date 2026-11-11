@@ -15,6 +15,7 @@
 namespace potato_peeling::internal::cabello {
 
     // For a cleaned polygon (clean_polygon); CCW. A convex P is returned as is.
-    Polygon vertex_convex_skull(const Polygon &p);
+    // Checks `stop` per visibility row and per apex.
+    Polygon vertex_convex_skull(const Polygon &p, const StopFn &stop);
 
 }  // namespace potato_peeling::internal::cabello
