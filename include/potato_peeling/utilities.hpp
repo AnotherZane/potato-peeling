@@ -24,7 +24,9 @@ namespace potato_peeling {
     POTATO_PEELING_EXPORT bool segment_in_polygon(const Polygon &p, const Point &a, const Point &b);
 
     // Constrained Delaunay triangulation of P, as counter-clockwise index triples
-    // into its vertices. Coordinates must be exactly representable as doubles.
+    // into its vertices. It is computed in doubles: coordinates that are not doubles
+    // are rounded and the result checked exactly; if rounding broke it (nearly
+    // degenerate input), an ear-clipping triangulation is returned instead.
     POTATO_PEELING_EXPORT std::vector<std::array<std::size_t, 3>> triangulate(const Polygon &p);
 
     // The longest segment contained in P, exact. Its line passes through two

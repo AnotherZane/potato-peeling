@@ -63,7 +63,8 @@ namespace potato_peeling {
     };
 
     // upper_bound: the search stops once within rel_tol * area(P) (as the nearest
-    // fraction with denominator <= 10^9); `pairs` pivots are paired for the
+    // fraction with denominator <= 10^9; finite and >= 0, where 0 searches until the
+    // caps, else std::invalid_argument); `pairs` pivots are paired for the
     // two-pivot bound (0 = none); width_dirs uniform slice directions are tried
     // besides P's edge directions; edge_samples adds pivots inside each edge. The
     // caps bound the work per pivot and per pair: stopping early loosens the

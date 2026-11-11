@@ -341,6 +341,11 @@ namespace potato_peeling::internal::chang_and_yap {
     void orient_chord_for_clipping(Point &p1, Point &p2, std::size_t reflex_idx,
                                    const Polygon &poly);
 
+    // The first reflex corner of P strictly inside the segment [a, b], if any.
+    std::optional<std::size_t> reflex_corner_inside(const Point &a, const Point &b,
+                                                    const Polygon &poly,
+                                                    const std::vector<bool> &reflex_flags);
+
     bool orient_extremal_chord(Point &p1, Point &p2, const Chord &chord, const Polygon &poly,
                                const std::vector<bool> &reflex_flags);
 

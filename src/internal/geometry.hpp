@@ -58,7 +58,19 @@ namespace potato_peeling::internal {
     std::vector<std::array<std::size_t, 3>>
     triangulate_polygon(const std::vector<std::array<double, 2>> &ring);
 
-    // As above for exact points, whose coordinates must be exactly representable as
-    // doubles (input polygons always are); throws otherwise.
+    // As above for exact points. Coordinates that are not doubles are rounded for
+    // CDT and the result is checked exactly (tiles_polygon); if rounding broke it,
+    // the polygon is ear-clipped instead, so the result is then not Delaunay.
     std::vector<std::array<std::size_t, 3>> triangulate_polygon(const std::vector<Point> &ring);
+
+    // True iff the triangles (index triples into `ring`, either orientation) tile the
+    // simple polygon `ring` exactly: none degenerate, and once each is made CCW, no
+    // directed edge occurs twice and the unpaired edges are P's edges, each once, in
+    // P's CCW direction. Every point is then covered by as many triangles as P's
+    // boundary winds around it: once inside, never outside.
+    bool tiles_polygon(const std::vector<Point> &ring,
+                       const std::vector<std::array<std::size_t, 3>> &triangles);
+
+    // An ear-clipping triangulation of a simple polygon, in exact arithmetic. O(n^3).
+    std::vector<std::array<std::size_t, 3>> ear_clip(const std::vector<Point> &ring);
 }  // namespace potato_peeling::internal

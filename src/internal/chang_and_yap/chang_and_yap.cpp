@@ -1759,6 +1759,16 @@ namespace potato_peeling::internal::chang_and_yap {
         return result;
     }
 
+    std::optional<std::size_t> reflex_corner_inside(const Point &a, const Point &b,
+                                                    const Polygon &poly,
+                                                    const std::vector<bool> &reflex_flags) {
+        for (std::size_t k = 0; k < poly.size(); ++k)
+            if (reflex_flags[k] && CGAL::collinear(a, poly[k], b)
+                && CGAL::collinear_are_strictly_ordered_along_line(a, poly[k], b))
+                return k;
+        return std::nullopt;
+    }
+    
     // Orient a chord through a reflex corner so C+ is on its left. Section 2:
     // "C+ is the closed half-plane such that for a sufficiently small disc D
     // centered at u, D ∩ C+ ⊆ P"
@@ -1787,6 +1797,11 @@ namespace potato_peeling::internal::chang_and_yap {
             orient_chord_for_clipping(p1, p2, chord.i, poly);
         } else if (reflex_flags[chord.j]) {
             orient_chord_for_clipping(p1, p2, chord.j, poly);
+        } else if (const auto k = reflex_corner_inside(poly[chord.i], poly[chord.j], poly,
+                                                       reflex_flags)) {
+            // Convex ends, but the chord passes through a reflex corner of P (its
+            // line runs along edges of P), which defines C+.
+            orient_chord_for_clipping(p1, p2, *k, poly);
         } else {
             // Section 2 defines C+ for a chord through a reflex corner. The other
             // legal case is an edge of P: its interior side is left of the CCW

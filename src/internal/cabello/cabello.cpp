@@ -39,8 +39,11 @@ namespace potato_peeling::internal::cabello {
         EdgeResult search_edge(const Options &opt, const VisibilityOracle &oracle, const Pt &a,
                                const Pt &b, const double gamma_area, const std::size_t r_ab,
                                const std::size_t s_ab, const std::uint64_t iteration,
-                               const std::uint64_t edge_index) {
+                               const std::uint64_t edge_index, const StopFn &stop) {
+            // Returns early, incomplete, once `stop` returns true; the caller then
+            // discards every edge's result.
             EdgeResult out;
+            constexpr std::size_t poll_every = 1024;  // samples between polls
 
             const auto box = gamma(a, b, gamma_area);
             // y(a) == y(b) leaves Gamma undefined. Probability zero.
@@ -53,21 +56,24 @@ namespace potato_peeling::internal::cabello {
             std::vector<Pt> pts;
             pts.reserve(r_ab + s_ab);
             for (std::size_t k = 0; k < r_ab; ++k) {
+                if (k % poll_every == 0 && stop()) return out;
                 if (Pt z = sample_uniform(*box, gen_r); oracle.inside(z)) pts.push_back(z);
             }
 
             const std::size_t n_r = pts.size();  // R_ab occupies pts[0, n_r)
 
             for (std::size_t k = 0; k < s_ab; ++k) {
+                if (k % poll_every == 0 && stop()) return out;
                 if (Pt z = sample_uniform(*box, gen_s); oracle.inside(z)) pts.push_back(z);
             }
             if (pts.size() < 3) return out;
 
-            const PointGraph g = visibility_graph(oracle, pts);
+            const PointGraph g = visibility_graph(oracle, pts, stop);
 
             // Lines 12-14: the highest vertex ranges over S_ab only [C17 p16].
             for (std::size_t s = n_r; s < pts.size(); ++s) {
-                const Clique u = phi(g, s);
+                if (stop()) return out;
+                const Clique u = phi(g, s, stop);
                 if (u.area > out.area) {
                     out.area = u.area;
                     out.points.clear();
@@ -86,8 +92,10 @@ namespace potato_peeling::internal::cabello {
             throw std::invalid_argument("cabello: epsilon must lie in (0,1)");
         if (!(opt.delta > 0.0 && opt.delta < 1.0))
             throw std::invalid_argument("cabello: delta must lie in (0,1)");
-        if (opt.sample_scale <= 0.0 || opt.s_scale <= 0.0)
+        if (!(opt.sample_scale > 0.0 && opt.s_scale > 0.0))
             throw std::invalid_argument("cabello: sample scales must be positive");
+        if (opt.max_edges && *opt.max_edges == 0)
+            throw std::invalid_argument("cabello: max_edges must be positive");
 
         const Polygon &cleaned = p;
 
@@ -147,7 +155,8 @@ namespace potato_peeling::internal::cabello {
 
             // Lines 6-7. With C3 around 10^7 the edge budget is never hit in
             // practice, but it bounds the worst case.
-            const PointGraph g = visibility_graph(oracle, R);
+            const PointGraph g = visibility_graph(oracle, R, opt.should_stop);
+            check_stop(opt.should_stop);
 
             std::vector<std::pair<std::size_t, std::size_t>> edges;
             for (std::size_t i = 0; i < R.size(); ++i)
@@ -169,20 +178,24 @@ namespace potato_peeling::internal::cabello {
             }
 
             // Lines 8-14. The calling thread works alongside threads - 1 others and
-            // is the only one that calls should_stop; the others see `stopped`.
+            // is the only one that calls should_stop, also from inside its edge
+            // searches; the others see `stopped`, there too.
             std::vector<EdgeResult> per_edge(edges.size());
             const unsigned threads
                 = opt.threads ? opt.threads : std::max(1u, std::thread::hardware_concurrency());
             std::atomic<std::size_t> next{0};
             std::atomic<bool> stopped{false};
             const auto work = [&](const bool caller) {
+                const StopFn poll = [&] {
+                    if (caller && !stopped && opt.should_stop && opt.should_stop()) stopped = true;
+                    return stopped.load();
+                };
                 for (;;) {
-                    if (caller && opt.should_stop && opt.should_stop()) stopped = true;
-                    if (stopped) return;
+                    if (poll()) return;
                     const std::size_t e = next.fetch_add(1);
                     if (e >= edges.size()) return;
                     per_edge[e] = search_edge(opt, oracle, R[edges[e].first], R[edges[e].second], U,
-                                              r_ab, s_ab, it, e);
+                                              r_ab, s_ab, it, e, poll);
                 }
             };
             std::vector<std::thread> pool;

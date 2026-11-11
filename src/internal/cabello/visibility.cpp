@@ -105,11 +105,14 @@ namespace potato_peeling::internal::cabello {
         return !impl_->intersects(Seg(a, b));
     }
 
-    PointGraph visibility_graph(const VisibilityOracle &oracle, const std::vector<Pt> &points) {
+    PointGraph visibility_graph(const VisibilityOracle &oracle, const std::vector<Pt> &points,
+                                const StopFn &stop) {
         PointGraph g(points);
-        for (std::size_t i = 0; i < points.size(); ++i)
+        for (std::size_t i = 0; i < points.size(); ++i) {
+            if (stop && stop()) return g;
             for (std::size_t j = i + 1; j < points.size(); ++j)
                 if (oracle.visible(points[i], points[j])) g.add_edge(i, j);
+        }
         return g;
     }
 

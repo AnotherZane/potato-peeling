@@ -19,6 +19,7 @@
 
 #include "internal/cabello/graph.hpp"
 #include "internal/cabello/kernel.hpp"
+#include "internal/common.hpp"
 
 namespace potato_peeling::internal::cabello {
 
@@ -49,7 +50,9 @@ namespace potato_peeling::internal::cabello {
         std::unique_ptr<Impl> impl_;
     };
 
-    // G(P, points) [C17 p2]. O(|points|^2 log n).
-    PointGraph visibility_graph(const VisibilityOracle &oracle, const std::vector<Pt> &points);
+    // G(P, points) [C17 p2]. O(|points|^2 log n). Returns early, incomplete, once
+    // `stop` returns true (polled once per point); the caller discards it.
+    PointGraph visibility_graph(const VisibilityOracle &oracle, const std::vector<Pt> &points,
+                                const StopFn &stop = {});
 
 }  // namespace potato_peeling::internal::cabello

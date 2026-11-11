@@ -5,6 +5,7 @@
 #include <map>
 #include <queue>
 #include <set>
+#include <stdexcept>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -559,6 +560,9 @@ namespace potato_peeling::internal::bounds {
     }  // namespace
 
     Result upper_bound(const Polygon &p, const Options &options) {
+        // 0 is allowed: the search then runs until the caps.
+        if (!(options.rel_tol >= 0.0 && std::isfinite(options.rel_tol)))
+            throw std::invalid_argument("upper_bound: rel_tol must be finite and >= 0");
         Polygon ccw = p;
         if (ccw.is_clockwise_oriented()) ccw.reverse_orientation();
         const std::vector<Point> pts(ccw.vertices_begin(), ccw.vertices_end());

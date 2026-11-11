@@ -12,9 +12,12 @@
 #include <cstddef>
 
 #include "internal/cabello/graph.hpp"
+#include "internal/common.hpp"
 
 namespace potato_peeling::internal::cabello {
 
-    Clique phi(const PointGraph &h, std::size_t s);
+    // Returns early, incomplete, once `stop` returns true (polled once per point);
+    // the caller discards it.
+    Clique phi(const PointGraph &h, std::size_t s, const StopFn &stop = {});
 
 }  // namespace potato_peeling::internal::cabello

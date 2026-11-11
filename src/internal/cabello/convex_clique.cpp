@@ -84,7 +84,7 @@ namespace potato_peeling::internal::cabello {
         };
     }  // namespace
 
-    Clique phi(const PointGraph &h, const std::size_t s) {
+    Clique phi(const PointGraph &h, const std::size_t s, const StopFn &stop) {
         Clique best;
         double best_val = 0.0;
         const std::vector<std::size_t> x = radial_candidates(h, s);
@@ -104,6 +104,7 @@ namespace potato_peeling::internal::cabello {
         std::vector<double> vals;
 
         for (std::size_t i = 0; i < n; ++i) {
+            if (stop && stop()) return best;
             arrivals.clear();
             for (std::size_t g = 0; g < i; ++g)
                 if (has[g * n + i] && h.edge(x[g], x[i])) arrivals.push_back(g);

@@ -75,6 +75,9 @@ namespace potato_peeling {
         // The search keeps P's collinear vertices: adjoin tries each vertex of P,
         // and those on P's edges can be good candidates.
         const Polygon searched = internal::remove_repeated_vertices(p);
+        const Polygon first = internal::remove_repeated_vertices(start);
+        if (!internal::cabello::is_convex_subset(clean, first))
+            throw invalid_polygon("refine: start is not a convex polygon inside P");
         internal::refinement::Options opt;
         opt.max_sweeps = options.max_sweeps;
         opt.rot_steps = options.rot_steps;
@@ -83,7 +86,7 @@ namespace potato_peeling {
         opt.adjoin_rounds = options.adjoin_rounds;
         opt.should_stop = options.should_stop;
         return make_skull("refine", clean,
-                          internal::refinement::refine(searched, start, opt).polygon);
+                          internal::refinement::refine(searched, first, opt).polygon);
     }
 
     Skull vertex_convex_skull(const Polygon &p, const VertexSkullOptions &options) {
