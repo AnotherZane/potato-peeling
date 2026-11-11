@@ -1,0 +1,74 @@
+# Build and test on every push and pull request: the default C++ and Python test
+# sets against system packages (wheels use pinned dependencies, see wheels.yml).
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: python3 ci/check_version.py
+
+  linux:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Ubuntu (latest)
+            os: ubuntu-latest
+            python: true
+          # The oldest supported setup: CGAL 5.4, Boost 1.74, CMake 3.22. C++ only.
+          - name: Ubuntu 22.04 (minimum versions)
+            os: ubuntu-22.04
+            python: false
+    steps:
+      - uses: actions/checkout@v7
+      - name: Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            g++ cmake libcgal-dev libboost-dev libgmp-dev libmpfr-dev
+      - name: C++ build and tests
+        run: |
+          cmake -S . -B build/ci -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/ci -j "$(nproc)"
+          ctest --test-dir build/ci -LE slow --output-on-failure
+      - if: matrix.python
+        uses: astral-sh/setup-uv@v10
+      - if: matrix.python
+        name: Python tests
+        run: |
+          uv sync
+          uv run pytest
+
+  macos:
+    name: macOS (arm64)
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Dependencies
+        run: brew install cgal boost gmp mpfr
+      - name: C++ build and tests
+        run: |
+          cmake -S . -B build/ci -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/ci -j "$(sysctl -n hw.ncpu)"
+          ctest --test-dir build/ci -LE slow --output-on-failure
+      - uses: astral-sh/setup-uv@v10
+      - name: Python tests
+        run: |
+          uv sync
+          uv run pytest

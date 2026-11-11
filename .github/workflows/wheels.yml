@@ -1,0 +1,132 @@
+# The sdist and wheels, each wheel tested with the default Python test set.
+#   - pull requests touching packaging, and manual runs: build and test only;
+#   - manual run with "publish" ticked: also upload to TestPyPI;
+#   - a v* tag (matching the version): also upload to PyPI.
+# Uploads use trusted publishing (environments testpypi and pypi).
+name: Wheels
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Upload to TestPyPI
+        type: boolean
+        default: false
+  push:
+    tags: ["v*"]
+  pull_request:
+    paths:
+      - pyproject.toml
+      - CMakeLists.txt
+      - ci/**
+      - .github/workflows/wheels.yml
+
+permissions:
+  contents: read
+
+jobs:
+  sdist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Version
+        run: |
+          if [ "${{ github.ref_type }}" = tag ]; then
+            python3 ci/check_version.py --tag "${{ github.ref_name }}"
+          else
+            python3 ci/check_version.py
+          fi
+      - uses: astral-sh/setup-uv@v10
+      - run: uv build --sdist
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+
+  wheels:
+    name: Wheels (${{ matrix.os }})
+    needs: sdist
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-15, macos-15-intel]
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: sdist
+          path: sdist
+      # Built from the sdist, so a broken sdist fails here.
+      - name: Locate the sdist
+        id: sdist
+        run: echo "path=$(ls sdist/*.tar.gz)" >> "$GITHUB_OUTPUT"
+      - uses: pypa/cibuildwheel@v4.3.5
+        with:
+          package-dir: ${{ steps.sdist.outputs.path }}
+          output-dir: wheelhouse
+      - uses: actions/upload-artifact@v7
+        with:
+          name: wheels-${{ matrix.os }}
+          path: wheelhouse/*.whl
+
+  # cibuildwheel tests the abi3 wheel on 3.12 only; test it on the later versions.
+  abi3:
+    name: abi3 wheel on ${{ matrix.python }} (${{ matrix.os }})
+    needs: wheels
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-15, macos-15-intel]
+        python: ["3.13", "3.14", "3.15"]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            tests
+            pyproject.toml
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: actions/download-artifact@v8
+        with:
+          name: wheels-${{ matrix.os }}
+          path: wheelhouse
+      - name: Install and test
+        run: |
+          python -m pip install pytest
+          # optional test dependencies: their tests skip if no wheel exists yet
+          python -m pip install --only-binary :all: numpy shapely || true
+          python -m pip install --no-index --find-links wheelhouse potato-peeling
+          python -m pytest tests/python
+
+  testpypi:
+    if: github.event_name == 'workflow_dispatch' && inputs.publish
+    needs: [sdist, wheels, abi3]
+    runs-on: ubuntu-latest
+    environment: testpypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: pypa/gh-action-pypi-publish@v1.14.3
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+  pypi:
+    if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
+    needs: [sdist, wheels, abi3]
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: pypa/gh-action-pypi-publish@v1.14.3
