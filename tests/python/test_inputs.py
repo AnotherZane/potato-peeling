@@ -75,6 +75,27 @@ def test_numpy():
     assert pp.exact_convex_skull(np.array(L_SHAPE, dtype=np.float64)) == EXPECTED
     assert pp.exact_convex_skull(np.array(L_SHAPE, dtype=np.int64)) == EXPECTED
     assert pp.exact_convex_skull([(np.float32(x), np.int32(y)) for x, y in L_SHAPE]) == EXPECTED
+    assert pp.exact_convex_skull(np.array(L_SHAPE, dtype=np.float32)) == EXPECTED
+
+
+def test_numpy_everywhere():
+    np = pytest.importorskip("numpy")
+    p = np.array(L_SHAPE, dtype=np.float64)
+    # a mesh as arrays, including triangulate's output fed back
+    tris = np.array(pp.triangulate(p))
+    assert pp.mesh_convex_skull(p, (p, tris)) == pp.mesh_convex_skull(L_SHAPE)
+    assert pp.mesh_convex_skull(p, pp.Mesh(p, tris.astype(np.int32))) == pp.mesh_convex_skull(L_SHAPE)
+    # a refine start, points and a second polygon as arrays
+    start = np.array([(0, 0), (1, 0), (0, 1)], dtype=np.float64)
+    assert pp.refine(p, start) == pp.refine(L_SHAPE, [(0, 0), (1, 0), (0, 1)])
+    assert pp.segment_in_polygon(p, p[0], p[2])
+    assert not pp.segment_in_polygon(p, np.array([2.0, 1.0]), np.array([1.0, 2.0]))
+    assert pp.is_convex_subset(p, start)
+    assert pp.reflex_vertices(p) == pp.reflex_vertices(L_SHAPE)
+    assert pp.longest_segment(p) == pp.longest_segment(L_SHAPE)
+    assert pp.upper_bound(p) == pp.upper_bound(L_SHAPE)
+    # results convert to arrays
+    assert np.array(EXPECTED.coords).shape == (len(EXPECTED.vertices), 2)
 
 
 def test_shapely_round_trip():
