@@ -5,10 +5,25 @@
 # MACOSX_DEPLOYMENT_TARGET (Homebrew's are built for the runner's macOS); on
 # Linux they come from the manylinux image's package manager.
 #
+# A prefix already filled by this exact script, for this platform and deployment
+# target, is left as it is (CI caches it on macOS).
+#
 #   ci/install_deps.sh [PREFIX]      then: CMAKE_PREFIX_PATH=PREFIX
 set -euo pipefail
 
 PREFIX="${1:-/opt/deps}"
+
+sha256() {
+    if command -v sha256sum >/dev/null; then sha256sum "$1" | cut -d' ' -f1
+    else shasum -a 256 "$1" | cut -d' ' -f1; fi
+}
+
+STAMP="$(sha256 "$0") $(uname -s) $(uname -m) ${MACOSX_DEPLOYMENT_TARGET:-}"
+if [ "$(cat "$PREFIX/.install_deps" 2>/dev/null)" = "$STAMP" ]; then
+    echo "dependencies already installed in $PREFIX"
+    exit 0
+fi
+
 WORK="$(mktemp -d)"
 JOBS="$( (nproc || sysctl -n hw.ncpu) 2>/dev/null)"
 mkdir -p "$PREFIX"
@@ -28,8 +43,7 @@ fetch() {
     file="$WORK/$(basename "$1")"
     curl -fsSL --retry 3 -o "$file" "$1"
     local sum
-    if command -v sha256sum >/dev/null; then sum=$(sha256sum "$file" | cut -d' ' -f1)
-    else sum=$(shasum -a 256 "$file" | cut -d' ' -f1); fi
+    sum=$(sha256 "$file")
     if [ "$sum" != "$2" ]; then echo "checksum mismatch for $1: $sum" >&2; exit 1; fi
     tar -xJf "$file" -C "$WORK"
 }
@@ -78,4 +92,5 @@ elif command -v yum >/dev/null; then
 fi
 
 rm -rf "$WORK"
+echo "$STAMP" >"$PREFIX/.install_deps"
 echo "dependencies installed in $PREFIX"

@@ -60,6 +60,18 @@ jobs:
       - name: Locate the sdist
         id: sdist
         run: echo "path=$(ls sdist/*.tar.gz)" >> "$GITHUB_OUTPUT"
+      # macOS builds GMP and MPFR from source (minutes); keep the installed prefix
+      # until ci/install_deps.sh changes. The script skips a prefix it filled.
+      - if: runner.os == 'macOS'
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: ci
+          path: src
+      - if: runner.os == 'macOS'
+        uses: actions/cache@v6
+        with:
+          path: /tmp/potato-peeling-deps
+          key: deps-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('src/ci/install_deps.sh') }}
       - uses: pypa/cibuildwheel@v4.3.5
         with:
           package-dir: ${{ steps.sdist.outputs.path }}
