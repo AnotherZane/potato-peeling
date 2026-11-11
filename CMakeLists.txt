@@ -139,6 +139,18 @@ if (NOT SKBUILD)
             DESTINATION ${config_dir} COMPONENT development)
 endif ()
 
+# ── C++ tests (ctest) ─────────────────────────────────────────────────────────
+if (CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR AND NOT SKBUILD)
+    set(POTATO_PEELING_TESTS_DEFAULT ON)
+else ()
+    set(POTATO_PEELING_TESTS_DEFAULT OFF)
+endif ()
+option(POTATO_PEELING_BUILD_TESTS "Build the C++ tests" ${POTATO_PEELING_TESTS_DEFAULT})
+if (POTATO_PEELING_BUILD_TESTS AND NOT SKBUILD)
+    enable_testing()
+    add_subdirectory(tests/cpp)
+endif ()
+
 # ── Python bindings: potato_peeling._core ─────────────────────────────────────
 if (SKBUILD)
     find_package(Python COMPONENTS Interpreter Development.Module Development.SABIModule REQUIRED)

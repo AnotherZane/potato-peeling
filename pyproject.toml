@@ -27,4 +27,10 @@ build-dir = "build/{wheel_tag}"
 sdist.exclude = ["build/"]
 
 [dependency-groups]
-dev = ["pytest>=8"]
+dev = ["pytest>=8", "numpy", "shapely"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests/python"]
+# The slow tier runs with -m slow, or everything with -m "".
+addopts = ["-m", "not slow"]
+markers = ["slow: larger fixture polygons and the suboptimal optima (minutes)"]
