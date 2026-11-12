@@ -41,7 +41,8 @@ MPFR_SHA=b67ba0383ef7e8a8563734e2e889ef5ec3c3b898a01d00fa0a6869ad81c6ce01
 fetch() {
     local file
     file="$WORK/$(basename "$1")"
-    curl -fsSL --retry 3 -o "$file" "$1"
+    # timeouts, so a stalled connection fails (and --retry retries it) instead of hanging
+    curl -fsSL --connect-timeout 30 --max-time 900 --retry 3 --retry-delay 5 -o "$file" "$1"
     local sum
     sum=$(sha256 "$file")
     if [ "$sum" != "$2" ]; then echo "checksum mismatch for $1: $sum" >&2; exit 1; fi
@@ -85,10 +86,17 @@ if [ "$(uname)" = Darwin ]; then
     for lib in "$PREFIX"/lib/libgmp.dylib "$PREFIX"/lib/libmpfr.dylib; do
         otool -hv "$lib" | grep -q TWOLEVEL || { echo "$lib: flat namespace" >&2; exit 1; }
     done
-elif command -v dnf >/dev/null; then
-    dnf install -y -q gmp-devel mpfr-devel
-elif command -v yum >/dev/null; then
-    yum install -y -q gmp-devel mpfr-devel
+elif command -v dnf >/dev/null || command -v yum >/dev/null; then
+    # A stalled mirror once hung this step silently for over 20 minutes: show
+    # progress, fail over slow mirrors, and give up on an attempt after 10 minutes.
+    pm=$(command -v dnf || command -v yum)
+    for attempt in 1 2 3; do
+        timeout 600 "$pm" install -y --setopt=timeout=60 --setopt=minrate=10k \
+            gmp-devel mpfr-devel && break
+        [ "$attempt" = 3 ] && { echo "installing GMP and MPFR failed" >&2; exit 1; }
+        echo "installing GMP and MPFR failed (attempt $attempt), retrying" >&2
+        sleep 10
+    done
 fi
 
 rm -rf "$WORK"

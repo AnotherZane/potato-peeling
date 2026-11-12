@@ -47,6 +47,8 @@ jobs:
     name: Wheels (${{ matrix.os }})
     needs: sdist
     runs-on: ${{ matrix.os }}
+    # a hang (a stalled download, a stuck test) fails here instead of after 6 hours
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
@@ -88,6 +90,7 @@ jobs:
     name: abi3 wheel on ${{ matrix.python }} (${{ matrix.os }})
     needs: wheels
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
