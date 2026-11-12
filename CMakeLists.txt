@@ -21,6 +21,13 @@ option(BUILD_SHARED_LIBS "Build potato_peeling as a shared library" ON)
 if (MSVC)
     # Large objects (CGAL, Chang & Yap), standard conformance, UTF-8 sources.
     add_compile_options(/bigobj /permissive- /utf-8)
+    # The Python module links MSVC's runtime statically, so wheels need no
+    # msvcp140.dll (a vendored one can be older than the toolset that built the
+    # module). Safe: GMP and MPFR allocate and free their own memory. Set before any
+    # target, since everything linked into the module (nanobind too) must match.
+    if (SKBUILD)
+        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    endif ()
 endif ()
 # Windows finds DLLs beside the executable: keep the library and the test programs
 # in one directory.
