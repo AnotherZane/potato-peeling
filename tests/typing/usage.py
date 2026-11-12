@@ -1,5 +1,6 @@
 """Type-checked, not run by pytest: the public API as users call it must pass
 mypy --strict and pyright against the installed package."""
+import threading
 from fractions import Fraction
 
 import numpy as np
@@ -28,6 +29,12 @@ flags: list[bool] = pp.reflex_vertices(L)
 x: Fraction = a[0]
 geo = {"type": "Polygon", "coordinates": [L]}
 pp.vertex_convex_skull(geo)
+cancel: pp.CancelLike = threading.Event()
+try:
+    pp.exact_convex_skull(L, timeout=5.0, cancel=cancel)
+except pp.Cancelled:
+    pass
+pp.refine(L, start, cancel=lambda: False)
 
 try:
     pp.exact_convex_skull([(0, 0), (1, 1)])

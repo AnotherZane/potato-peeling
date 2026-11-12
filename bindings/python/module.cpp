@@ -2,8 +2,9 @@
 //
 // Coordinates arrive as float, int, or an exact (numerator, denominator) pair of
 // ints, and exact values leave as (numerator, denominator) pairs of Python ints;
-// the Python layer builds Fractions. Every call releases the GIL. A call with a
-// timeout, or interrupted by Ctrl-C, stops through should_stop.
+// the Python layer builds Fractions. Every call releases the GIL. The caller's
+// should_stop (the Python layer adds the timeout to it) and Ctrl-C stop a call
+// through the C++ should_stop.
 
 #include <array>
 #include <chrono>
@@ -13,6 +14,7 @@
 #include <optional>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <nanobind/nanobind.h>
@@ -97,58 +99,65 @@ namespace {
         return nb::make_tuple(vertices, rational(s.area));
     }
 
-    // should_stop for one call: the timeout, and Ctrl-C (Python runs signal
-    // handlers only when asked, so this asks every 20 ms, holding the GIL briefly).
+    // should_stop for one call: the caller's should_stop and Ctrl-C. Python runs
+    // signal handlers only when asked, so every 20 ms this holds the GIL briefly to
+    // ask and to call should_stop (the library calls it only from the calling thread).
     class Stopper {
     public:
-        explicit Stopper(const std::optional<double> timeout) {
-            if (timeout)
-                deadline_ = clock::now()
-                            + std::chrono::duration_cast<clock::duration>(
-                                std::chrono::duration<double>(*timeout));
-        }
+        explicit Stopper(nb::object should_stop) : should_stop_(std::move(should_stop)) {}
 
         bool operator()() {
             const auto now = clock::now();
-            if (deadline_ && now >= *deadline_) timed_out = true;
-            if (!signal_ && now - last_ >= std::chrono::milliseconds(20)) {
+            if (!stopped_ && now - last_ >= std::chrono::milliseconds(20)) {
                 last_ = now;
                 nb::gil_scoped_acquire acquire;
-                if (PyErr_CheckSignals() != 0) signal_.emplace();  // takes the pending error
+                if (PyErr_CheckSignals() != 0)
+                    error_.emplace();  // takes the pending error
+                else if (!should_stop_.is_none())
+                    poll();
+                stopped_ = stopped_ || error_.has_value();
             }
-            return timed_out || signal_.has_value();
+            return stopped_;
         }
 
-        // After the call, with the GIL held: re-raise a signal's exception.
-        void raise_signal() {
-            if (signal_) throw nb::python_error(*signal_);
+        // After the call, with the GIL held: re-raise an exception from a signal or
+        // from should_stop.
+        void raise_error() {
+            if (error_) throw nb::python_error(*error_);
         }
-
-        bool timed_out = false;
 
     private:
         using clock = std::chrono::steady_clock;
-        std::optional<clock::time_point> deadline_;
+
+        void poll() {
+            PyObject *result = PyObject_CallNoArgs(should_stop_.ptr());
+            const int truth = result ? PyObject_IsTrue(result) : -1;
+            Py_XDECREF(result);
+            if (truth < 0)
+                error_.emplace();
+            else
+                stopped_ = truth != 0;
+        }
+
+        nb::object should_stop_;
         clock::time_point last_ = clock::now();
-        std::optional<nb::python_error> signal_;
+        bool stopped_ = false;
+        std::optional<nb::python_error> error_;
     };
 
-    // Runs f(should_stop) without the GIL. A timeout raises TimeoutError, unless
-    // f returned anyway (refine returns its state when stopped); a signal always
-    // re-raises its exception (KeyboardInterrupt for Ctrl-C).
-    template <class F> auto run(const std::optional<double> timeout, F &&f) {
-        Stopper stopper(timeout);
+    // Runs f(should_stop) without the GIL. When stopped, f returns if it can (refine
+    // returns its state); otherwise Cancelled is raised, or the exception from a
+    // signal (KeyboardInterrupt for Ctrl-C) or from should_stop.
+    template <class F> auto run(nb::object should_stop, F &&f) {
+        Stopper stopper(std::move(should_stop));
         const pp::StopCallback stop = [&stopper] { return stopper(); };
         std::optional<decltype(f(stop))> out;
         try {
             nb::gil_scoped_release release;
             out.emplace(f(stop));
         } catch (const pp::cancelled &) {}
-        stopper.raise_signal();
-        if (!out) {
-            PyErr_SetString(PyExc_TimeoutError, "timed out");
-            throw nb::python_error();
-        }
+        stopper.raise_error();
+        if (!out) throw pp::cancelled("cancelled by should_stop");
         return *out;
     }
 }  // namespace
@@ -158,13 +167,13 @@ NB_MODULE(_core, m) {
 
     nb::exception<pp::invalid_polygon>(m, "InvalidPolygonError", PyExc_ValueError);
     nb::exception<pp::certification_error>(m, "CertificationError", PyExc_RuntimeError);
+    nb::exception<pp::cancelled>(m, "Cancelled", PyExc_Exception);
 
     m.def(
         "convex_skull",
-        [](nb::handle p, const std::uint64_t seed, const unsigned threads,
-           const std::optional<double> timeout) {
+        [](nb::handle p, const std::uint64_t seed, const unsigned threads, nb::object should_stop) {
             const pp::Polygon poly = to_polygon(p);
-            return skull_out(run(timeout, [&](const pp::StopCallback &stop) {
+            return skull_out(run(should_stop, [&](const pp::StopCallback &stop) {
                 pp::ConvexSkullOptions o;
                 o.seed = seed;
                 o.threads = threads;
@@ -172,29 +181,29 @@ NB_MODULE(_core, m) {
                 return pp::convex_skull(poly, o);
             }));
         },
-        nb::arg("polygon"), nb::arg("seed"), nb::arg("threads"), nb::arg("timeout").none());
+        nb::arg("polygon"), nb::arg("seed"), nb::arg("threads"), nb::arg("should_stop").none());
 
     m.def(
         "exact_convex_skull",
-        [](nb::handle p, const std::optional<double> timeout) {
+        [](nb::handle p, nb::object should_stop) {
             const pp::Polygon poly = to_polygon(p);
-            return skull_out(run(timeout, [&](const pp::StopCallback &stop) {
+            return skull_out(run(should_stop, [&](const pp::StopCallback &stop) {
                 pp::BaseOptions o;
                 o.should_stop = stop;
                 return pp::exact_convex_skull(poly, o);
             }));
         },
-        nb::arg("polygon"), nb::arg("timeout").none());
+        nb::arg("polygon"), nb::arg("should_stop").none());
 
     m.def(
         "mesh_convex_skull",
         [](nb::handle p, nb::handle points,
            const std::optional<std::vector<std::array<std::size_t, 3>>> &triangles,
-           const std::optional<double> timeout) {
+           nb::object should_stop) {
             const pp::Polygon poly = to_polygon(p);
             std::optional<pp::Mesh> mesh;
             if (triangles) mesh = pp::Mesh{to_points(points), *triangles};
-            return skull_out(run(timeout, [&](const pp::StopCallback &stop) {
+            return skull_out(run(should_stop, [&](const pp::StopCallback &stop) {
                 pp::BaseOptions o;
                 o.should_stop = stop;
                 return mesh ? pp::mesh_convex_skull(poly, *mesh, o)
@@ -202,14 +211,14 @@ NB_MODULE(_core, m) {
             }));
         },
         nb::arg("polygon"), nb::arg("points").none(), nb::arg("triangles").none(),
-        nb::arg("timeout").none());
+        nb::arg("should_stop").none());
 
     m.def(
         "approximate_convex_skull",
         [](nb::handle p, const double epsilon, const double delta, const std::uint64_t seed,
            const double sample_scale, const double s_scale,
            const std::optional<std::size_t> max_edges, const unsigned threads,
-           const std::string &lower_bound, const std::optional<double> timeout) {
+           const std::string &lower_bound, nb::object should_stop) {
             const pp::Polygon poly = to_polygon(p);
             pp::ApproximateOptions o;
             o.epsilon = epsilon;
@@ -225,22 +234,22 @@ NB_MODULE(_core, m) {
                 o.lower_bound = pp::LowerBound::vertex_triangle;
             else
                 throw nb::value_error("lower_bound must be 'aronov' or 'vertex_triangle'");
-            return skull_out(run(timeout, [&](const pp::StopCallback &stop) {
+            return skull_out(run(should_stop, [&](const pp::StopCallback &stop) {
                 o.should_stop = stop;
                 return pp::approximate_convex_skull(poly, o);
             }));
         },
         nb::arg("polygon"), nb::arg("epsilon"), nb::arg("delta"), nb::arg("seed"),
         nb::arg("sample_scale"), nb::arg("s_scale"), nb::arg("max_edges").none(),
-        nb::arg("threads"), nb::arg("lower_bound"), nb::arg("timeout").none());
+        nb::arg("threads"), nb::arg("lower_bound"), nb::arg("should_stop").none());
 
     m.def(
         "refine",
         [](nb::handle p, nb::handle start, const unsigned max_sweeps, const unsigned rot_steps,
            const double rot_span, const unsigned split_steps, const unsigned adjoin_rounds,
-           const std::optional<double> timeout) {
+           nb::object should_stop) {
             const pp::Polygon poly = to_polygon(p), st = to_polygon(start);
-            return skull_out(run(timeout, [&](const pp::StopCallback &stop) {
+            return skull_out(run(should_stop, [&](const pp::StopCallback &stop) {
                 pp::RefineOptions o;
                 o.max_sweeps = max_sweeps;
                 o.rot_steps = rot_steps;
@@ -253,27 +262,27 @@ NB_MODULE(_core, m) {
         },
         nb::arg("polygon"), nb::arg("start"), nb::arg("max_sweeps"), nb::arg("rot_steps"),
         nb::arg("rot_span"), nb::arg("split_steps"), nb::arg("adjoin_rounds"),
-        nb::arg("timeout").none());
+        nb::arg("should_stop").none());
 
     m.def(
         "vertex_convex_skull",
-        [](nb::handle p, const std::optional<double> timeout) {
+        [](nb::handle p, nb::object should_stop) {
             const pp::Polygon poly = to_polygon(p);
-            return skull_out(run(timeout, [&](const pp::StopCallback &stop) {
+            return skull_out(run(should_stop, [&](const pp::StopCallback &stop) {
                 pp::BaseOptions o;
                 o.should_stop = stop;
                 return pp::vertex_convex_skull(poly, o);
             }));
         },
-        nb::arg("polygon"), nb::arg("timeout").none());
+        nb::arg("polygon"), nb::arg("should_stop").none());
 
     m.def(
         "upper_bound",
         [](nb::handle p, const double rel_tol, const unsigned pairs, const unsigned width_dirs,
            const unsigned edge_samples, const std::size_t max_evals_1d,
-           const std::size_t max_evals_2d, const std::optional<double> timeout) {
+           const std::size_t max_evals_2d, nb::object should_stop) {
             const pp::Polygon poly = to_polygon(p);
-            return rational(run(timeout, [&](const pp::StopCallback &stop) {
+            return rational(run(should_stop, [&](const pp::StopCallback &stop) {
                 pp::UpperBoundOptions o;
                 o.rel_tol = rel_tol;
                 o.pairs = pairs;
@@ -287,7 +296,7 @@ NB_MODULE(_core, m) {
         },
         nb::arg("polygon"), nb::arg("rel_tol"), nb::arg("pairs"), nb::arg("width_dirs"),
         nb::arg("edge_samples"), nb::arg("max_evals_1d"), nb::arg("max_evals_2d"),
-        nb::arg("timeout").none());
+        nb::arg("should_stop").none());
 
     m.def("is_convex_subset", [](nb::handle p, nb::handle q) {
         const pp::Polygon a = to_polygon(p), b = to_polygon(q);

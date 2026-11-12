@@ -1,4 +1,4 @@
-"""timeout=, Ctrl-C and the GIL. SLOW is a polygon whose exact solve takes well over
+"""timeout=, cancel=, Ctrl-C and the GIL. SLOW is a polygon whose exact solve takes well over
 20 s, so a stop that does not work shows up as a long hang, not a pass."""
 import _thread
 import os
@@ -51,6 +51,96 @@ def test_convex_skull_timeout_returns_or_raises():
 def test_generous_timeout_changes_nothing():
     p = [(0, 0), (2, 0), (2, 1), (1, 1), (1, 2), (0, 2)]
     assert pp.exact_convex_skull(p, timeout=60) == pp.exact_convex_skull(p)
+
+
+def _cancel_after(seconds):
+    """An Event set from another thread, as a cancel button would (the solve
+    itself runs in this thread)."""
+    event = threading.Event()
+    timer = threading.Timer(seconds, event.set)
+    timer.start()
+    return event, timer
+
+
+@pytest.mark.parametrize("method", [
+    pp.exact_convex_skull,
+    lambda p, cancel: pp.upper_bound(p, rel_tol=0, cancel=cancel),
+])
+def test_cancel_raises_cancelled(method):
+    cancel, timer = _cancel_after(0.3)
+    t = time.monotonic()
+    try:
+        with pytest.raises(pp.Cancelled):
+            method(SLOW, cancel=cancel)
+    finally:
+        timer.cancel()
+    assert time.monotonic() - t < 0.3 + LATE
+
+
+def test_cancel_in_a_worker_thread():
+    # The QGIS case: the solve runs in a worker thread, cancelled from the main one
+    # through a callable (QGIS passes feedback.isCanceled).
+    flag = threading.Event()
+    outcome = []
+
+    def solve():
+        try:
+            pp.exact_convex_skull(SLOW, cancel=flag.is_set)
+        except pp.Cancelled:
+            outcome.append(time.monotonic())
+
+    worker = threading.Thread(target=solve)
+    worker.start()
+    time.sleep(0.3)
+    t = time.monotonic()
+    flag.set()
+    worker.join(timeout=10)
+    assert not worker.is_alive()
+    assert outcome and outcome[0] - t < LATE
+
+
+def test_refine_cancel_returns_answer_so_far():
+    start = [(0, 0), (1, 0), (0, 1)]
+    cancel, timer = _cancel_after(0.2)
+    t = time.monotonic()
+    try:
+        s = pp.refine(SLOW, start, max_sweeps=10_000, adjoin_rounds=50, cancel=cancel)
+    finally:
+        timer.cancel()
+    assert time.monotonic() - t < 0.2 + LATE
+    assert_certified(SLOW, s)
+    assert s.area >= pp.refine(SLOW, start, max_sweeps=0).area
+
+
+def test_cancel_true_from_the_start():
+    # Any truthy value stops; convex_skull raises before refining, returns after.
+    t = time.monotonic()
+    with pytest.raises(pp.Cancelled):
+        pp.exact_convex_skull(SLOW, cancel=lambda: 1)
+    try:
+        assert_certified(SLOW, pp.convex_skull(SLOW, cancel=lambda: True))
+    except pp.Cancelled:
+        pass
+    assert time.monotonic() - t < 2 * LATE
+
+
+def test_cancel_exception_propagates():
+    class Boom(Exception):
+        pass
+
+    def cancel():
+        raise Boom
+
+    t = time.monotonic()
+    with pytest.raises(Boom):
+        pp.exact_convex_skull(SLOW, cancel=cancel)
+    assert time.monotonic() - t < LATE
+
+
+def test_unset_cancel_changes_nothing():
+    p = [(0, 0), (2, 0), (2, 1), (1, 1), (1, 2), (0, 2)]
+    assert pp.exact_convex_skull(p, cancel=threading.Event()) == pp.exact_convex_skull(p)
+    assert pp.convex_skull(p, cancel=lambda: False, timeout=60) == pp.convex_skull(p)
 
 
 def test_ctrl_c():

@@ -2,14 +2,15 @@
 from __future__ import annotations
 
 import math
+import time
 from dataclasses import dataclass
 from decimal import Decimal
 from fractions import Fraction
-from typing import (Any, List, Mapping, NamedTuple, Optional, Protocol, Sequence, SupportsFloat,
+from typing import (Any, Callable, List, Mapping, NamedTuple, Optional, Protocol, Sequence, SupportsFloat,
                     Tuple, Union)
 
 from . import _core
-from ._core import InvalidPolygonError
+from ._core import Cancelled, InvalidPolygonError
 
 class _ArrayLike(Protocol):
     """A NumPy array, read through tolist()."""
@@ -28,6 +29,15 @@ class _GeoInterface(Protocol):
 Number = Union[int, float, Fraction, Decimal, SupportsFloat]
 Point = Union[Sequence[Number], _ArrayLike]
 ExactPoint = Tuple[Fraction, Fraction]
+class _Event(Protocol):
+    """A threading.Event, or anything with is_set()."""
+
+    def is_set(self) -> bool: ...
+
+
+# A method's cancel=: an Event, or a callable returning true once the call should
+# stop. Checked about every 20 ms, from the calling thread.
+CancelLike = Union[_Event, Callable[[], bool]]
 # A polygon in any accepted form: points, an (n, 2) array, a GeoJSON mapping, an
 # object with __geo_interface__, or a Skull.
 PolygonLike = Union[Sequence[Point], _ArrayLike, Mapping[str, Any], _GeoInterface]
@@ -115,26 +125,55 @@ def _skull(raw) -> Skull:
                  Fraction(an, ad))
 
 
+def _run(f: Callable[..., Any], *args: Any, timeout: Optional[float],
+         cancel: Optional[CancelLike]) -> Any:
+    """f(*args, stop), where stop combines cancel and the deadline; a stop by the
+    deadline raises TimeoutError instead of Cancelled."""
+    cancelled = cancel.is_set if hasattr(cancel, "is_set") else cancel
+    if timeout is None:
+        return f(*args, cancelled)
+    deadline = time.monotonic() + timeout
+    timed_out = False
+
+    def stop() -> bool:
+        nonlocal timed_out
+        if cancelled is not None and cancelled():
+            return True
+        timed_out = time.monotonic() >= deadline
+        return timed_out
+
+    try:
+        return f(*args, stop)
+    except Cancelled:
+        if timed_out:
+            raise TimeoutError("timed out") from None
+        raise
+
+
 # ── methods ─────────────────────────────────────────────────────────────────
 
 
 def convex_skull(polygon: PolygonLike, *, seed: int = 0, threads: int = 0,
-                 timeout: Optional[float] = None) -> Skull:
+                 timeout: Optional[float] = None,
+                 cancel: Optional[CancelLike] = None) -> Skull:
     """The best general-purpose method: certified, and close to optimal in
     practice. What it runs may improve between versions (currently
     approximate_convex_skull, then refine with adjoin moves).
 
     threads: 0 uses every hardware thread; the answer does not depend on it.
-    timeout: seconds; stopped while refining, the answer so far is returned,
-    earlier TimeoutError is raised.
+    timeout, cancel: stopped while refining, the answer so far is returned;
+    earlier TimeoutError or Cancelled is raised.
     """
-    return _skull(_core.convex_skull(_ring(polygon), seed, threads, timeout))
+    return _skull(_run(_core.convex_skull, _ring(polygon), seed, threads,
+                       timeout=timeout, cancel=cancel))
 
 
-def exact_convex_skull(polygon: PolygonLike, *, timeout: Optional[float] = None) -> Skull:
+def exact_convex_skull(polygon: PolygonLike, *, timeout: Optional[float] = None,
+                       cancel: Optional[CancelLike] = None) -> Skull:
     """The exact optimum (Chang & Yap 1986). Practical up to a few dozen
     vertices; raises TimeoutError after `timeout` seconds."""
-    return _skull(_core.exact_convex_skull(_ring(polygon), timeout))
+    return _skull(_run(_core.exact_convex_skull, _ring(polygon),
+                       timeout=timeout, cancel=cancel))
 
 
 MeshLike = Union[Mesh, Tuple[Union[Sequence[Point], _ArrayLike],
@@ -142,22 +181,25 @@ MeshLike = Union[Mesh, Tuple[Union[Sequence[Point], _ArrayLike],
 
 
 def mesh_convex_skull(polygon: PolygonLike, mesh: Optional[MeshLike] = None,
-                      *, timeout: Optional[float] = None) -> Skull:
+                      *, timeout: Optional[float] = None,
+                      cancel: Optional[CancelLike] = None) -> Skull:
     """The best union of triangles of a triangulation of P (Aronov, van
     Kreveld, Löffler & Silveira 2011): P's constrained Delaunay triangulation,
     or `mesh`, which must tile P exactly (InvalidPolygonError otherwise)."""
     if mesh is None:
-        return _skull(_core.mesh_convex_skull(_ring(polygon), None, None, timeout))
+        return _skull(_run(_core.mesh_convex_skull, _ring(polygon), None, None,
+                           timeout=timeout, cancel=cancel))
     points, triangles = mesh
-    return _skull(_core.mesh_convex_skull(_ring(polygon), [_point(p) for p in points],
-                                          [tuple(t) for t in triangles], timeout))
+    return _skull(_run(_core.mesh_convex_skull, _ring(polygon), [_point(p) for p in points],
+                       [tuple(t) for t in triangles], timeout=timeout, cancel=cancel))
 
 
 def approximate_convex_skull(polygon: PolygonLike, *, epsilon: float = 0.1, delta: float = 1 / 3,
                              seed: int = 0, sample_scale: float = 3e-4, s_scale: float = 3e-2,
                              max_edges: Optional[int] = 64, threads: int = 0,
                              lower_bound: str = "vertex_triangle",
-                             timeout: Optional[float] = None) -> Skull:
+                             timeout: Optional[float] = None,
+                             cancel: Optional[CancelLike] = None) -> Skull:
     """Randomised approximation (Cabello, Cibulka, Kynčl, Saumell & Valtr 2017).
     With sample_scale = s_scale = 1 and max_edges=None it is the paper's
     (1 - epsilon)-approximation with failure probability delta; the defaults
@@ -168,34 +210,38 @@ def approximate_convex_skull(polygon: PolygonLike, *, epsilon: float = 0.1, delt
     default, better and faster on the whole) or "aronov" (mesh_convex_skull's
     area).
     """
-    return _skull(_core.approximate_convex_skull(
-        _ring(polygon), epsilon, delta, seed, sample_scale, s_scale, max_edges, threads,
-        lower_bound, timeout))
+    return _skull(_run(
+        _core.approximate_convex_skull, _ring(polygon), epsilon, delta, seed, sample_scale,
+        s_scale, max_edges, threads, lower_bound, timeout=timeout, cancel=cancel))
 
 
 def refine(polygon: PolygonLike, start: PolygonLike, *, max_sweeps: int = 12, rot_steps: int = 9, rot_span: float = 0.30,
            split_steps: int = 0, adjoin_rounds: int = 0,
-           timeout: Optional[float] = None) -> Skull:
+           timeout: Optional[float] = None,
+           cancel: Optional[CancelLike] = None) -> Skull:
     """Local ascent from `start` (a convex polygon inside P, or a Skull); never
-    returns less than start. After `timeout` seconds the answer so far is
-    returned."""
-    return _skull(_core.refine(_ring(polygon), _ring(start), max_sweeps, rot_steps, rot_span,
-                               split_steps, adjoin_rounds, timeout))
+    returns less than start. After `timeout` seconds, or once cancelled, the
+    answer so far is returned."""
+    return _skull(_run(_core.refine, _ring(polygon), _ring(start), max_sweeps, rot_steps, rot_span,
+                       split_steps, adjoin_rounds, timeout=timeout, cancel=cancel))
 
 
-def vertex_convex_skull(polygon: PolygonLike, *, timeout: Optional[float] = None) -> Skull:
+def vertex_convex_skull(polygon: PolygonLike, *, timeout: Optional[float] = None,
+                        cancel: Optional[CancelLike] = None) -> Skull:
     """The largest convex polygon in P whose vertices are vertices of P (Fischer;
     Bautista-Santiago et al.). Never below mesh_convex_skull(polygon)."""
-    return _skull(_core.vertex_convex_skull(_ring(polygon), timeout))
+    return _skull(_run(_core.vertex_convex_skull, _ring(polygon),
+                       timeout=timeout, cancel=cancel))
 
 
 def upper_bound(polygon: PolygonLike, *, rel_tol: float = 1e-3, pairs: int = 6, width_dirs: int = 180,
                 edge_samples: int = 0, max_evals_1d: int = 200_000, max_evals_2d: int = 4_000,
-                timeout: Optional[float] = None) -> Fraction:
+                timeout: Optional[float] = None,
+                cancel: Optional[CancelLike] = None) -> Fraction:
     """A certified upper bound on the area of P's convex skull (pivot, two-pivot
     and width relaxations, computed exactly)."""
-    n, d = _core.upper_bound(_ring(polygon), rel_tol, pairs, width_dirs, edge_samples,
-                             max_evals_1d, max_evals_2d, timeout)
+    n, d = _run(_core.upper_bound, _ring(polygon), rel_tol, pairs, width_dirs, edge_samples,
+                max_evals_1d, max_evals_2d, timeout=timeout, cancel=cancel)
     return Fraction(n, d)
 
 
