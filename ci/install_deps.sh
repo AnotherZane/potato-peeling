@@ -28,6 +28,9 @@ if [ "$(cat "$PREFIX/.install_deps" 2>/dev/null)" = "$STAMP" ]; then
 fi
 
 WORK="$(mktemp -d)"
+# Windows: TEMP can be an 8.3 short path (RUNNER~1); CMake compares paths in
+# their long form, so Boost's install rules failed to tell build from install paths.
+if command -v cygpath >/dev/null; then WORK="$(cygpath -m -l "$WORK")"; fi
 JOBS="$( (nproc || sysctl -n hw.ncpu) 2>/dev/null)"
 mkdir -p "$PREFIX"
 
