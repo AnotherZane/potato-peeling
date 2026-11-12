@@ -111,15 +111,18 @@ elif [[ "$(uname -s)" == MINGW* || "$(uname -s)" == MSYS* ]]; then
         --x-install-root="$(cygpath -m "$PREFIX/vcpkg")"
     rm -rf "$VCPKG_ROOT"
 elif command -v dnf >/dev/null || command -v yum >/dev/null; then
-    # A stalled mirror once hung this step silently for over 20 minutes: show
-    # progress, fail over slow mirrors, and give up on an attempt after 10 minutes.
+    # A stalled mirror once hung this step silently for over 20 minutes, and another
+    # served an empty index: show progress, fail over slow mirrors, give up on an
+    # attempt after 10 minutes, and before retrying drop the cached index (so a
+    # mirror is chosen afresh) and wait for transient faults to clear.
     pm=$(command -v dnf || command -v yum)
-    for attempt in 1 2 3; do
+    for attempt in 1 2 3 4; do
         timeout 600 "$pm" install -y --setopt=timeout=60 --setopt=minrate=10k \
             gmp-devel mpfr-devel && break
-        [ "$attempt" = 3 ] && { echo "installing GMP and MPFR failed" >&2; exit 1; }
+        [ "$attempt" = 4 ] && { echo "installing GMP and MPFR failed" >&2; exit 1; }
         echo "installing GMP and MPFR failed (attempt $attempt), retrying" >&2
-        sleep 10
+        "$pm" clean metadata || true
+        sleep $((30 * attempt))
     done
 fi
 
