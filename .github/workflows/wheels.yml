@@ -48,6 +48,24 @@ jobs:
           name: sdist
           path: dist/*.tar.gz
 
+  # The committed type stub must match the built module (CI checks this on every
+  # push too). Runs beside the wheel builds and gates only publishing.
+  stub:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      UV_PYTHON_PREFERENCE: only-managed
+    steps:
+      - uses: actions/checkout@v7
+      - name: Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            g++ cmake libcgal-dev libboost-dev libgmp-dev libmpfr-dev
+      - uses: astral-sh/setup-uv@v10.3.3
+      - run: uv sync
+      - run: bash ci/update_stub.sh --check
+
   wheels:
     name: Wheels (${{ matrix.os }})
     needs: sdist
@@ -138,7 +156,7 @@ jobs:
 
   testpypi:
     if: github.event_name == 'workflow_dispatch' && inputs.publish
-    needs: [sdist, wheels, abi3]
+    needs: [sdist, stub, wheels, abi3]
     runs-on: ubuntu-latest
     environment: testpypi
     permissions:
@@ -154,7 +172,7 @@ jobs:
 
   pypi:
     if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
-    needs: [sdist, wheels, abi3]
+    needs: [sdist, stub, wheels, abi3]
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
