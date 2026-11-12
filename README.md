@@ -4,6 +4,7 @@
 [![Wheels](https://github.com/AnotherZane/potato-peeling/actions/workflows/wheels.yml/badge.svg)](https://github.com/AnotherZane/potato-peeling/actions/workflows/wheels.yml)
 [![PyPI](https://img.shields.io/pypi/v/potato-peeling)](https://pypi.org/project/potato-peeling/)
 [![Python](https://img.shields.io/pypi/pyversions/potato-peeling)](https://pypi.org/project/potato-peeling/)
+[![C++17](https://img.shields.io/badge/C%2B%2B-17-blue)](https://en.cppreference.com/cpp/17)
 [![License: LGPL-3.0-or-later](https://img.shields.io/badge/license-LGPL--3.0--or--later-blue)](https://github.com/AnotherZane/potato-peeling/blob/main/COPYING.LESSER)
 
 Algorithms for the [potato-peeling](https://en.wikipedia.org/wiki/Potato_peeling) problem: find the largest-area convex polygon contained in a simple polygon (its *convex skull*).
