@@ -52,7 +52,8 @@ fetch() {
     local sum
     sum=$(sha256 "$file")
     if [ "$sum" != "$2" ]; then echo "checksum mismatch for $1: $sum" >&2; exit 1; fi
-    tar -xJf "$file" -C "$WORK"
+    # run in WORK with a bare name: GNU tar takes the C: of a Windows path for a host
+    (cd "$WORK" && tar -xJf "$(basename "$file")")
 }
 
 command -v cmake >/dev/null || python3 -m pip install --quiet cmake
