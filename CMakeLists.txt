@@ -18,6 +18,16 @@ endif ()
 # Shared by default, so LGPL users can relink against a modified library.
 option(BUILD_SHARED_LIBS "Build potato_peeling as a shared library" ON)
 
+if (MSVC)
+    # Large objects (CGAL, Chang & Yap), standard conformance, UTF-8 sources.
+    add_compile_options(/bigobj /permissive- /utf-8)
+endif ()
+# Windows finds DLLs beside the executable: keep the library and the test programs
+# in one directory.
+if (WIN32 AND CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR AND NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+endif ()
+
 include(GNUInstallDirs)
 include(GenerateExportHeader)
 include(CMakePackageConfigHelpers)
@@ -78,6 +88,7 @@ target_include_directories(potato_peeling_core
 target_compile_features(potato_peeling_core PUBLIC cxx_std_17)
 target_link_libraries(potato_peeling_core PUBLIC CGAL::CGAL PRIVATE Boost::headers CDT::CDT)
 # The upper bound's double-precision search must round the same everywhere.
+# (MSVC's default /fp:precise does not contract since Visual Studio 2022 17.0.)
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     set_source_files_properties(src/internal/bounds/upper_bound.cpp
             PROPERTIES COMPILE_OPTIONS "-ffp-contract=off")

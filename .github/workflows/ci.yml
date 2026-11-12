@@ -61,6 +61,29 @@ jobs:
           uv sync
           uv run pytest
 
+  # MSVC, against the pinned dependencies the Windows wheels use (vcpkg for GMP and
+  # MPFR). C++ only: the Python package is tested through the wheels.
+  windows:
+    name: Windows (MSVC)
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache@v6
+        with:
+          path: C:/deps
+          key: deps-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('ci/install_deps.sh', 'ci/vcpkg/vcpkg.json') }}
+      - name: Dependencies
+        run: bash ci/install_deps.sh C:/deps
+      - name: C++ build and tests
+        run: |
+          cmake -S . -B build/ci -DCMAKE_PREFIX_PATH="C:/deps;C:/deps/vcpkg/x64-windows"
+          cmake --build build/ci --config Release -j 4
+          PATH="/c/deps/vcpkg/x64-windows/bin:$PATH" \
+            ctest --test-dir build/ci -C Release -LE slow --output-on-failure
+
   macos:
     name: macOS (arm64)
     runs-on: macos-15

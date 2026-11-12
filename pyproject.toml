@@ -22,6 +22,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: GIS",
     "Operating System :: POSIX :: Linux",
     "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
     "Programming Language :: C++",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.10",
@@ -75,3 +76,11 @@ environment = { CMAKE_PREFIX_PATH = "/opt/deps" }
 [tool.cibuildwheel.macos]
 before-all = "bash ci/install_deps.sh /tmp/potato-peeling-deps"
 environment = { CMAKE_PREFIX_PATH = "/tmp/potato-peeling-deps", MACOSX_DEPLOYMENT_TARGET = "11.0" }
+
+[tool.cibuildwheel.windows]
+archs = ["AMD64"]
+# Git Bash by path: a bare `bash` can resolve to WSL's from cmd.exe.
+before-all = '"C:/Program Files/Git/bin/bash.exe" ci/install_deps.sh C:/deps'
+environment = { CMAKE_PREFIX_PATH = "C:/deps;C:/deps/vcpkg/x64-windows" }
+before-build = "pip install delvewheel"
+repair-wheel-command = "delvewheel repair --add-path C:/deps/vcpkg/x64-windows/bin -w {dest_dir} {wheel}"

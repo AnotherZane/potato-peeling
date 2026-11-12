@@ -3,22 +3,25 @@
 # CGAL and Boost headers with their CMake package files, pinned by SHA-256, and
 # GMP and MPFR. On macOS GMP and MPFR are built from source for
 # MACOSX_DEPLOYMENT_TARGET (Homebrew's are built for the runner's macOS); on
-# Linux they come from the manylinux image's package manager.
+# Linux they come from the manylinux image's package manager; on Windows (Git
+# Bash) from vcpkg, built with MSVC as pinned in ci/vcpkg/vcpkg.json.
 #
 # A prefix already filled by this exact script, for this platform and deployment
 # target, is left as it is (CI caches it on macOS).
 #
 #   ci/install_deps.sh [PREFIX]      then: CMAKE_PREFIX_PATH=PREFIX
+#                                    (Windows: also PREFIX/vcpkg/x64-windows)
 set -euo pipefail
 
 PREFIX="${1:-/opt/deps}"
+HERE="$(cd "$(dirname "$0")" && pwd)"
 
 sha256() {
     if command -v sha256sum >/dev/null; then sha256sum "$1" | cut -d' ' -f1
     else shasum -a 256 "$1" | cut -d' ' -f1; fi
 }
 
-STAMP="$(sha256 "$0") $(uname -s) $(uname -m) ${MACOSX_DEPLOYMENT_TARGET:-}"
+STAMP="$(sha256 "$0") $(sha256 "$HERE/vcpkg/vcpkg.json") $(uname -s) $(uname -m) ${MACOSX_DEPLOYMENT_TARGET:-}"
 if [ "$(cat "$PREFIX/.install_deps" 2>/dev/null)" = "$STAMP" ]; then
     echo "dependencies already installed in $PREFIX"
     exit 0
@@ -86,6 +89,15 @@ if [ "$(uname)" = Darwin ]; then
     for lib in "$PREFIX"/lib/libgmp.dylib "$PREFIX"/lib/libmpfr.dylib; do
         otool -hv "$lib" | grep -q TWOLEVEL || { echo "$lib: flat namespace" >&2; exit 1; }
     done
+elif [[ "$(uname -s)" == MINGW* || "$(uname -s)" == MSYS* ]]; then
+    # The runner's vcpkg checkout may predate the pinned baseline: fetch it.
+    VCPKG_ROOT="$(cygpath -u "${VCPKG_INSTALLATION_ROOT:?VCPKG_INSTALLATION_ROOT is not set}")"
+    BASELINE=$(sed -n 's/.*"builtin-baseline": *"\([0-9a-f]*\)".*/\1/p' "$HERE/vcpkg/vcpkg.json")
+    git -C "$VCPKG_ROOT" cat-file -e "$BASELINE^{commit}" 2>/dev/null \
+        || git -C "$VCPKG_ROOT" fetch --quiet origin "$BASELINE"
+    "$VCPKG_ROOT/vcpkg" install --triplet x64-windows \
+        --x-manifest-root="$(cygpath -m "$HERE/vcpkg")" \
+        --x-install-root="$(cygpath -m "$PREFIX/vcpkg")"
 elif command -v dnf >/dev/null || command -v yum >/dev/null; then
     # A stalled mirror once hung this step silently for over 20 minutes: show
     # progress, fail over slow mirrors, and give up on an attempt after 10 minutes.

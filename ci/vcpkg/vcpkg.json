@@ -1,0 +1,5 @@
+{
+  "$comment": "GMP and MPFR for Windows wheels (MSVC). The baseline pins gmp 6.3.0#6 and mpfr 4.2.2#2, the releases used on Linux/macOS. GMP is built for a generic x86_64 CPU (vcpkg configures it for x86_64-pc-mingw32); its fat build is not supported with MSVC.",
+  "dependencies": ["gmp", "mpfr"],
+  "builtin-baseline": "177e8175121536d414f405ed8b3099b325a42638"
+}

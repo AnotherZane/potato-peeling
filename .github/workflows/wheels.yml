@@ -24,6 +24,11 @@ on:
 permissions:
   contents: read
 
+defaults:
+  run:
+    # Git Bash on Windows
+    shell: bash
+
 jobs:
   sdist:
     runs-on: ubuntu-latest
@@ -52,7 +57,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, ubuntu-24.04-arm, macos-15, macos-15-intel]
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-15, macos-15-intel, windows-latest]
     steps:
       - uses: actions/download-artifact@v8
         with:
@@ -62,18 +67,19 @@ jobs:
       - name: Locate the sdist
         id: sdist
         run: echo "path=$(ls sdist/*.tar.gz)" >> "$GITHUB_OUTPUT"
-      # macOS builds GMP and MPFR from source (minutes); keep the installed prefix
-      # until ci/install_deps.sh changes. The script skips a prefix it filled.
-      - if: runner.os == 'macOS'
+      # macOS and Windows build GMP and MPFR from source (minutes); keep the
+      # installed prefix until the script or the vcpkg manifest changes. The script
+      # skips a prefix it filled.
+      - if: runner.os != 'Linux'
         uses: actions/checkout@v7
         with:
           sparse-checkout: ci
           path: src
-      - if: runner.os == 'macOS'
+      - if: runner.os != 'Linux'
         uses: actions/cache@v6
         with:
-          path: /tmp/potato-peeling-deps
-          key: deps-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('src/ci/install_deps.sh') }}
+          path: ${{ runner.os == 'Windows' && 'C:/deps' || '/tmp/potato-peeling-deps' }}
+          key: deps-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('src/ci/install_deps.sh', 'src/ci/vcpkg/vcpkg.json') }}
       - uses: pypa/cibuildwheel@v4.3.5
         with:
           package-dir: ${{ steps.sdist.outputs.path }}
@@ -94,7 +100,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, ubuntu-24.04-arm, macos-15, macos-15-intel]
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-15, macos-15-intel, windows-latest]
         python: ["3.15"]
     steps:
       - uses: actions/checkout@v7
