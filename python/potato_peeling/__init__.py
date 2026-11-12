@@ -6,12 +6,17 @@ contained in the input. See the README for the methods and their trade-offs.
 from importlib.metadata import PackageNotFoundError, version as _version
 
 from ._core import CertificationError, InvalidPolygonError
-from ._api import (Mesh, Skull, approximate_convex_skull, convex_skull, exact_convex_skull,
-                   is_convex_subset, longest_segment, mesh_convex_skull, reflex_vertices,
-                   refine, segment_in_polygon, triangulate, upper_bound, vertex_convex_skull)
+
+# Defined in the compiled module; shown to users as potato_peeling.<name>.
+InvalidPolygonError.__module__ = __name__
+CertificationError.__module__ = __name__
+from ._api import (Mesh, PolygonLike, Skull, approximate_convex_skull, convex_skull,
+                   exact_convex_skull, is_convex_subset, longest_segment, mesh_convex_skull,
+                   reflex_vertices, refine, segment_in_polygon, triangulate, upper_bound,
+                   vertex_convex_skull)
 
 __all__ = [
-    "Skull", "Mesh", "InvalidPolygonError", "CertificationError",
+    "Skull", "Mesh", "PolygonLike", "InvalidPolygonError", "CertificationError",
     "convex_skull", "exact_convex_skull", "mesh_convex_skull", "approximate_convex_skull",
     "refine", "vertex_convex_skull", "upper_bound",
     "is_convex_subset", "segment_in_polygon", "triangulate", "reflex_vertices",

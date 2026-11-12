@@ -172,4 +172,13 @@ if (SKBUILD)
     target_link_libraries(_core PRIVATE potato_peeling_core)
     target_compile_definitions(_core PRIVATE CGAL_LICENSE_ERROR)
     install(TARGETS _core DESTINATION potato_peeling COMPONENT python)
+
+    # Type stubs for _core, generated from the built module, so type checkers see
+    # its signatures and exception classes.
+    nanobind_add_stub(_core_stub
+            MODULE _core
+            OUTPUT _core.pyi
+            PYTHON_PATH $<TARGET_FILE_DIR:_core>
+            DEPENDS _core)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/_core.pyi DESTINATION potato_peeling COMPONENT python)
 endif ()

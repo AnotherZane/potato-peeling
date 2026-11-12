@@ -121,6 +121,14 @@ jobs:
           python -m pip install --only-binary :all: numpy shapely || true
           python -m pip install --no-index --find-links wheelhouse potato-peeling
           python -m pytest tests/python
+      # The types users see (py.typed, the generated _core.pyi), on the installed
+      # wheel; the same on every platform, so checked once.
+      - if: matrix.os == 'ubuntu-latest'
+        name: Types
+        run: |
+          python -m pip install mypy pyright numpy
+          python -m mypy --strict tests/typing/usage.py
+          pyright --pythonpath "$(command -v python)" tests/typing/usage.py
 
   testpypi:
     if: github.event_name == 'workflow_dispatch' && inputs.publish
