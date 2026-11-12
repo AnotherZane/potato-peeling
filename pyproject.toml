@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "potato-peeling"
-version = "0.1.0a1"
+version = "0.1.0a2"
 description = "The largest convex polygon inside a simple polygon (its convex skull): exact, meshed and approximate algorithms"
 readme = "README.md"
 license = "LGPL-3.0-or-later"
