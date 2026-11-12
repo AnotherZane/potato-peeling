@@ -1,9 +1,11 @@
-# Build and test on every push and pull request: the default C++ and Python test
+# Build and test pushes to main and pull requests: the default C++ and Python test
 # sets against system packages (wheels use pinned dependencies, see wheels.yml).
+# Tags are not built here (a branch filter excludes them); wheels.yml tests a release.
 name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
