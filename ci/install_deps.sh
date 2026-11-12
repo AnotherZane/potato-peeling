@@ -94,14 +94,22 @@ if [ "$(uname)" = Darwin ]; then
         otool -hv "$lib" | grep -q TWOLEVEL || { echo "$lib: flat namespace" >&2; exit 1; }
     done
 elif [[ "$(uname -s)" == MINGW* || "$(uname -s)" == MSYS* ]]; then
-    # The runner's vcpkg checkout may predate the pinned baseline: fetch it.
-    VCPKG_ROOT="$(cygpath -u "${VCPKG_INSTALLATION_ROOT:?VCPKG_INSTALLATION_ROOT is not set}")"
+    # vcpkg itself at the pinned baseline commit, so its version database and tool
+    # match the manifest whatever vcpkg a machine has installed (a newer baseline
+    # than an installed checkout is not resolvable from that checkout).
     BASELINE=$(sed -n 's/.*"builtin-baseline": *"\([0-9a-f]*\)".*/\1/p' "$HERE/vcpkg/vcpkg.json")
-    git -C "$VCPKG_ROOT" cat-file -e "$BASELINE^{commit}" 2>/dev/null \
-        || git -C "$VCPKG_ROOT" fetch --quiet origin "$BASELINE"
+    # A short path beside PREFIX: vcpkg's build trees nest deeply, and MSYS builds
+    # can exceed Windows' 260-character path limit under a long temp directory.
+    VCPKG_ROOT="${PREFIX%/}-vcpkg"
+    rm -rf "$VCPKG_ROOT"
+    git init --quiet "$VCPKG_ROOT"
+    git -C "$VCPKG_ROOT" fetch --quiet --depth 1 https://github.com/microsoft/vcpkg "$BASELINE"
+    git -C "$VCPKG_ROOT" checkout --quiet FETCH_HEAD
+    cmd.exe //c "$(cygpath -w "$VCPKG_ROOT/bootstrap-vcpkg.bat")" -disableMetrics
     "$VCPKG_ROOT/vcpkg" install --triplet x64-windows \
         --x-manifest-root="$(cygpath -m "$HERE/vcpkg")" \
         --x-install-root="$(cygpath -m "$PREFIX/vcpkg")"
+    rm -rf "$VCPKG_ROOT"
 elif command -v dnf >/dev/null || command -v yum >/dev/null; then
     # A stalled mirror once hung this step silently for over 20 minutes: show
     # progress, fail over slow mirrors, and give up on an attempt after 10 minutes.
