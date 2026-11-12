@@ -12,6 +12,9 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
+#include <memory>
+#include <new>
 #include <utility>
 #include <vector>
 
@@ -23,8 +26,15 @@ namespace potato_peeling::internal::cabello {
     public:
         PointGraph() = default;
 
+        // The n x n adjacency matrix is calloc'd: at the paper's sample sizes it is
+        // gigabytes, and filling it up front took seconds before any stop check;
+        // the OS supplies zeroed pages as visibility_graph writes them.
         explicit PointGraph(std::vector<Pt> pts)
-            : points_(std::move(pts)), adj_(points_.size() * points_.size(), 0) {}
+            : points_(std::move(pts)),
+              adj_(static_cast<std::uint8_t *>(std::calloc(points_.size() * points_.size(), 1)),
+                   &std::free) {
+            if (!adj_ && !points_.empty()) throw std::bad_alloc();
+        }
 
         std::size_t size() const { return points_.size(); }
 
@@ -33,17 +43,18 @@ namespace potato_peeling::internal::cabello {
         const Pt &point(const std::size_t i) const { return points_[i]; }
 
         bool edge(const std::size_t i, const std::size_t j) const {
-            return adj_[i * points_.size() + j] != 0;
+            return adj_.get()[i * points_.size() + j] != 0;
         }
 
         void add_edge(const std::size_t i, const std::size_t j) {
-            adj_[i * points_.size() + j] = 1;
-            adj_[j * points_.size() + i] = 1;
+            adj_.get()[i * points_.size() + j] = 1;
+            adj_.get()[j * points_.size() + i] = 1;
         }
 
     private:
         std::vector<Pt> points_;
-        std::vector<std::uint8_t> adj_;  // row-major, symmetric, zero diagonal
+        // row-major, symmetric, zero diagonal
+        std::unique_ptr<std::uint8_t, decltype(&std::free)> adj_{nullptr, &std::free};
     };
 
     // The result of phi(H, s): a convex clique, its area, and its vertices in
