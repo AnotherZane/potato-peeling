@@ -1,11 +1,17 @@
 # potato-peeling
 
+[![CI](https://github.com/AnotherZane/potato-peeling/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/AnotherZane/potato-peeling/actions/workflows/ci.yml)
+[![Wheels](https://github.com/AnotherZane/potato-peeling/actions/workflows/wheels.yml/badge.svg)](https://github.com/AnotherZane/potato-peeling/actions/workflows/wheels.yml)
+[![PyPI](https://img.shields.io/pypi/v/potato-peeling)](https://pypi.org/project/potato-peeling/)
+[![Python](https://img.shields.io/pypi/pyversions/potato-peeling)](https://pypi.org/project/potato-peeling/)
+[![License: LGPL-3.0-or-later](https://img.shields.io/badge/license-LGPL--3.0--or--later-blue)](https://github.com/AnotherZane/potato-peeling/blob/main/COPYING.LESSER)
+
 Algorithms for the [potato-peeling](https://en.wikipedia.org/wiki/Potato_peeling) problem: find the largest-area convex polygon contained in a simple polygon (its *convex skull*).
 
 A C++ library with Python bindings; JavaScript bindings (a native Node.js addon and WebAssembly) are planned.
 
 > [!WARNING]
-> Not released yet: the API may still change before 0.1.
+> Alpha release: the API may still change before 0.1.
 
 ## Contents
 

@@ -13,9 +13,29 @@ authors = [
     { name = "Zane Pereira", email = "zanedpereira2@gmail.com" },
 ]
 requires-python = ">=3.10"
+keywords = ["convex skull", "potato peeling", "computational geometry", "polygon", "CGAL"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Scientific/Engineering :: GIS",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Programming Language :: C++",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
+    "Typing :: Typed",
+]
 
 [project.urls]
 Repository = "https://github.com/AnotherZane/potato-peeling"
+Issues = "https://github.com/AnotherZane/potato-peeling/issues"
 
 [tool.scikit-build]
 wheel.py-api = "cp312"
