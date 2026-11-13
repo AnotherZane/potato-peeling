@@ -84,6 +84,9 @@ add_library(potato_peeling_core OBJECT
         src/internal/cabello/a_bound.cpp
         src/internal/cabello/cabello.cpp
         src/internal/cabello/vertex_skull.cpp
+        src/internal/refinement/halfplanes.cpp
+        src/internal/refinement/evaluator.cpp
+        src/internal/refinement/push.cpp
         src/internal/refinement/refinement.cpp
         src/internal/bounds/upper_bound.cpp
 )

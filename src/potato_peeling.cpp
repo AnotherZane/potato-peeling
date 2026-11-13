@@ -84,6 +84,7 @@ namespace potato_peeling {
         opt.rot_span = options.rot_span;
         opt.split_steps = options.split_steps;
         opt.adjoin_rounds = options.adjoin_rounds;
+        opt.threads = options.threads;
         opt.should_stop = options.should_stop;
         return make_skull("refine", clean,
                           internal::refinement::refine(searched, first, opt).polygon);
@@ -116,6 +117,7 @@ namespace potato_peeling {
         approximate.should_stop = options.should_stop;
         RefineOptions refinement;
         refinement.adjoin_rounds = 8;
+        refinement.threads = options.threads;
         refinement.should_stop = options.should_stop;
         return refine(p, approximate_convex_skull(p, approximate).polygon, refinement);
     }

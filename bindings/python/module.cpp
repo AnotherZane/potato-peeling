@@ -247,7 +247,7 @@ NB_MODULE(_core, m) {
         "refine",
         [](nb::handle p, nb::handle start, const unsigned max_sweeps, const unsigned rot_steps,
            const double rot_span, const unsigned split_steps, const unsigned adjoin_rounds,
-           nb::object should_stop) {
+           const unsigned threads, nb::object should_stop) {
             const pp::Polygon poly = to_polygon(p), st = to_polygon(start);
             return skull_out(run(should_stop, [&](const pp::StopCallback &stop) {
                 pp::RefineOptions o;
@@ -256,12 +256,13 @@ NB_MODULE(_core, m) {
                 o.rot_span = rot_span;
                 o.split_steps = split_steps;
                 o.adjoin_rounds = adjoin_rounds;
+                o.threads = threads;
                 o.should_stop = stop;
                 return pp::refine(poly, st, o);
             }));
         },
         nb::arg("polygon"), nb::arg("start"), nb::arg("max_sweeps"), nb::arg("rot_steps"),
-        nb::arg("rot_span"), nb::arg("split_steps"), nb::arg("adjoin_rounds"),
+        nb::arg("rot_span"), nb::arg("split_steps"), nb::arg("adjoin_rounds"), nb::arg("threads"),
         nb::arg("should_stop").none());
 
     m.def(

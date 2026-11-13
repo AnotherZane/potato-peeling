@@ -218,6 +218,15 @@ def test_timeout_at_paper_sizes(threads):
     assert time.monotonic() - t < 1.5
 
 
+@pytest.mark.parametrize("case", fixture_params(SMALL[:6]) + [pytest.param("spiky", id="spiky")])
+def test_refine_threads_change_nothing(case):
+    p = p_of(case)
+    start = get(case, "approximate_convex_skull")
+    one = pp.refine(p, start, adjoin_rounds=8, split_steps=4, threads=1)
+    for threads in (0, 3, 8):
+        assert pp.refine(p, start, adjoin_rounds=8, split_steps=4, threads=threads) == one
+
+
 @pytest.mark.parametrize("kw", [dict(split_steps=4), dict(adjoin_rounds=2),
                                 dict(rot_steps=1, max_sweeps=1), dict(rot_span=1.0)])
 def test_refine_options(kw):

@@ -55,6 +55,10 @@ namespace potato_peeling::internal::refinement {
         unsigned adjoin_rounds{0};
         // Cap on the half-plane count, as a multiple of the start's.
         unsigned max_growth{4};
+        // Threads for the independent trials of rotate and split and for batches of
+        // adjoin candidates; 0 uses every hardware thread. The answer does not
+        // depend on it.
+        unsigned threads{0};
         // Checked before each edge and adjoin candidate. Once true, refine returns
         // its current, certified state instead of throwing.
         StopFn should_stop;

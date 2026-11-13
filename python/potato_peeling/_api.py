@@ -216,14 +216,17 @@ def approximate_convex_skull(polygon: PolygonLike, *, epsilon: float = 0.1, delt
 
 
 def refine(polygon: PolygonLike, start: PolygonLike, *, max_sweeps: int = 12, rot_steps: int = 9, rot_span: float = 0.30,
-           split_steps: int = 0, adjoin_rounds: int = 0,
+           split_steps: int = 0, adjoin_rounds: int = 0, threads: int = 0,
            timeout: Optional[float] = None,
            cancel: Optional[CancelLike] = None) -> Skull:
     """Local ascent from `start` (a convex polygon inside P, or a Skull); never
     returns less than start. After `timeout` seconds, or once cancelled, the
-    answer so far is returned."""
+    answer so far is returned.
+
+    threads: 0 uses every hardware thread; the answer does not depend on it.
+    """
     return _skull(_run(_core.refine, _ring(polygon), _ring(start), max_sweeps, rot_steps, rot_span,
-                       split_steps, adjoin_rounds, timeout=timeout, cancel=cancel))
+                       split_steps, adjoin_rounds, threads, timeout=timeout, cancel=cancel))
 
 
 def vertex_convex_skull(polygon: PolygonLike, *, timeout: Optional[float] = None,

@@ -31,6 +31,7 @@ add_executable(test_internal
         main.cpp
         internal/longest_segment.cpp
         internal/mesh.cpp
+        internal/parallel.cpp
         internal/vertex_skull.cpp)
 target_include_directories(test_internal PRIVATE ${PROJECT_SOURCE_DIR}/src)
 target_link_libraries(test_internal PRIVATE potato_peeling_core doctest::doctest)

@@ -75,6 +75,7 @@ namespace potato_peeling {
         double rot_span = 0.30;      // radians
         unsigned split_steps = 0;    // 0 = no split moves
         unsigned adjoin_rounds = 0;  // 0 = no adjoin moves
+        unsigned threads = 0;
     };
 
 }  // namespace potato_peeling

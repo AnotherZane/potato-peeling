@@ -72,7 +72,7 @@ Results are exact: a `Skull` has `vertices` and `area` as `Fraction`s, `coords` 
 
 ### Long runs and errors
 
-Every method takes `timeout=` in seconds, which raises `TimeoutError`, and `cancel=`, a `threading.Event` or a callable checked about every 20 ms, which raises `potato_peeling.Cancelled` once set or true. `refine`, and `convex_skull` while refining, return the best answer so far instead. Ctrl-C interrupts any call on the main thread. Calls release the GIL, so polygons can be solved in parallel with threads; `threads=` additionally parallelises Cabello's step (0, the default, uses every core).
+Every method takes `timeout=` in seconds, which raises `TimeoutError`, and `cancel=`, a `threading.Event` or a callable checked about every 20 ms, which raises `potato_peeling.Cancelled` once set or true. `refine`, and `convex_skull` while refining, return the best answer so far instead. Ctrl-C interrupts any call on the main thread. Calls release the GIL, so polygons can be solved in parallel with threads; `threads=` additionally parallelises Cabello's step and refinement inside one call (0, the default, uses every core; the answer does not depend on it).
 
 `InvalidPolygonError` (a `ValueError`) is raised for input that is not a simple polygon; `CertificationError` if a result fails its own check, which would be a bug.
 

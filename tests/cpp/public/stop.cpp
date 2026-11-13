@@ -137,6 +137,25 @@ TEST_CASE("a should_stop that never stops changes nothing") {
     CHECK(pp::exact_convex_skull(p, o).area == pp::exact_convex_skull(p).area);
 }
 
+TEST_CASE("refinement's answer does not depend on the thread count") {
+    for (const pp::Polygon &p : {tp::comb(), tp::spiky(), slow_star(24)}) {
+        pp::ApproximateOptions a;
+        a.threads = 1;
+        const pp::Skull start = pp::approximate_convex_skull(p, a);
+        pp::RefineOptions o;
+        o.adjoin_rounds = 8;
+        o.split_steps = 4;
+        o.threads = 1;
+        const pp::Skull one = pp::refine(p, start.polygon, o);
+        for (const unsigned t : {0u, 2u, 4u, 8u}) {
+            o.threads = t;
+            const pp::Skull r = pp::refine(p, start.polygon, o);
+            CHECK(r.area == one.area);
+            CHECK(r.polygon == one.polygon);
+        }
+    }
+}
+
 TEST_CASE("Cabello's answer does not depend on the thread count") {
     for (const pp::Polygon &p : {tp::comb(), tp::spiky(), slow_star(24)}) {
         pp::ApproximateOptions o;
