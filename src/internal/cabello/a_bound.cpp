@@ -8,21 +8,24 @@
 
 namespace potato_peeling::internal::cabello {
 
-    double largest_vertex_triangle(const Polygon &p) {
+    double largest_vertex_triangle(const Polygon &p, const StopFn &stop) {
         const std::size_t n = p.size();
         if (n < 3) return 0.0;
 
         // Pairwise visibility among the vertices, exact. O(n^2) queries.
         std::vector<char> vis(n * n, 0);
-        for (std::size_t i = 0; i < n; ++i)
+        for (std::size_t i = 0; i < n; ++i) {
+            check_stop(stop);
             for (std::size_t j = i + 1; j < n; ++j)
                 if (segment_in_polygon(p, p[i], p[j])) {
                     vis[i * n + j] = 1;
                     vis[j * n + i] = 1;
                 }
+        }
 
         FT best(0);
-        for (std::size_t i = 0; i < n; ++i)
+        for (std::size_t i = 0; i < n; ++i) {
+            check_stop(stop);
             for (std::size_t j = i + 1; j < n; ++j) {
                 if (!vis[i * n + j]) continue;
                 for (std::size_t k = j + 1; k < n; ++k) {
@@ -34,14 +37,15 @@ namespace potato_peeling::internal::cabello {
                     }
                 }
             }
+        }
         return CGAL::to_double(best);
     }
 
     double a_bound(const Polygon &p, const LowerBound choice, const StopFn &stop) {
-        if (choice == LowerBound::vertex_triangle) return largest_vertex_triangle(p);
+        if (choice == LowerBound::vertex_triangle) return largest_vertex_triangle(p, stop);
         // Aronov's convex skull is a convex subset of P, so a lower bound on A*(P).
         const Polygon skull = aronov::convex_skull(p, stop);
-        if (skull.size() < 3) return largest_vertex_triangle(p);
+        if (skull.size() < 3) return largest_vertex_triangle(p, stop);
         FT a = CGAL::abs(skull.area());
         CGAL::exact(a);
         return CGAL::to_double(a);

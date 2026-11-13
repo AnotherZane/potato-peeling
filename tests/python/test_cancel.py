@@ -1,7 +1,9 @@
 """timeout=, cancel=, Ctrl-C and the GIL. SLOW is a polygon whose exact solve takes well over
 20 s, so a stop that does not work shows up as a long hang, not a pass."""
 import _thread
+import math
 import os
+import random
 import signal
 import subprocess
 import sys
@@ -26,6 +28,21 @@ def test_timeout_raises(method):
     with pytest.raises(TimeoutError):
         method(SLOW, timeout=0.3)
     assert time.monotonic() - t < 0.3 + LATE
+
+
+def _star(n):
+    """A star polygon whose Cabello lower bound (O(n^3) vertex triangles) takes seconds."""
+    rnd = random.Random(1)
+    return [(r * math.cos(2 * math.pi * i / n), r * math.sin(2 * math.pi * i / n))
+            for i, r in enumerate(rnd.uniform(30, 100) for _ in range(n))]
+
+
+@pytest.mark.parametrize("method", [pp.convex_skull, pp.approximate_convex_skull])
+def test_timeout_during_the_lower_bound(method):
+    t = time.monotonic()
+    with pytest.raises(TimeoutError):
+        method(_star(300), timeout=0.05)
+    assert time.monotonic() - t < 0.05 + LATE
 
 
 def test_refine_timeout_returns_answer_so_far():

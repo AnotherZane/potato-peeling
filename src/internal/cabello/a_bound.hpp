@@ -16,7 +16,8 @@ namespace potato_peeling::internal::cabello {
 
     // Largest-area triangle with corners at vertices of P that is contained in P.
     // A triangle whose edges lie in P lies in P, so the test is three exact segment
-    // queries over a precomputed visibility matrix: O(n^3) overall.
-    double largest_vertex_triangle(const Polygon &p);
+    // queries over a precomputed visibility matrix: O(n^3) overall. Checks `stop`
+    // per row.
+    double largest_vertex_triangle(const Polygon &p, const StopFn &stop);
 
 }  // namespace potato_peeling::internal::cabello
