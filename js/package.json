@@ -1,0 +1,36 @@
+{
+  "name": "potato-peeling",
+  "version": "0.1.0-alpha.4",
+  "private": true,
+  "description": "The largest convex polygon inside a simple polygon (the potato-peeling problem): exact and approximate algorithms, with exact results",
+  "license": "LGPL-3.0-or-later",
+  "author": "Zane Pereira",
+  "homepage": "https://github.com/AnotherZane/potato-peeling",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AnotherZane/potato-peeling.git",
+    "directory": "js"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build:native": "cmake-js compile --directory .. --out ../build/node",
+    "build": "tsc",
+    "build:test": "tsc -p tsconfig.test.json",
+    "test": "npm run build:test && node --test dist-test/*.test.js"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "cmake-js": "^8.0.0",
+    "node-addon-api": "^8.9.2",
+    "typescript": "^7.0.2"
+  }
+}

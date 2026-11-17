@@ -38,8 +38,8 @@ class _Event(Protocol):
 # A method's cancel=: an Event, or a callable returning true once the call should
 # stop. Checked about every 20 ms, from the calling thread.
 CancelLike = Union[_Event, Callable[[], bool]]
-# A polygon in any accepted form: points, an (n, 2) array, a GeoJSON mapping, an
-# object with __geo_interface__, or a Skull.
+# A polygon in any accepted form: points, an (n, 2) array, a GeoJSON Polygon or
+# Feature mapping, an object with __geo_interface__, or a Skull.
 PolygonLike = Union[Sequence[Point], _ArrayLike, Mapping[str, Any], _GeoInterface]
 
 
@@ -107,6 +107,8 @@ def _ring(polygon: Any) -> list:
     gi = getattr(polygon, "__geo_interface__", None)
     if gi is None and isinstance(polygon, dict) and "type" in polygon:
         gi = polygon
+    if gi is not None and gi.get("type") == "Feature":
+        gi = gi.get("geometry") or {}
     if gi is not None:
         if gi.get("type") != "Polygon":
             raise InvalidPolygonError(f"expected a Polygon, got {gi.get('type')}")

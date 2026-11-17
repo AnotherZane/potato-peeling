@@ -11,6 +11,15 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 
+# Building a language binding (Python through scikit-build-core, Node.js through
+# cmake-js): the core objects go into the binding module only, with no shared library,
+# tests or install of the C++ package.
+if (SKBUILD OR CMAKE_JS_VERSION)
+    set(POTATO_PEELING_BINDING ON)
+else ()
+    set(POTATO_PEELING_BINDING OFF)
+endif ()
+
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif ()
@@ -21,11 +30,11 @@ option(BUILD_SHARED_LIBS "Build potato_peeling as a shared library" ON)
 if (MSVC)
     # Large objects (CGAL, Chang & Yap), standard conformance, UTF-8 sources.
     add_compile_options(/bigobj /permissive- /utf-8)
-    # The Python module links MSVC's runtime statically, so wheels need no
-    # msvcp140.dll (a vendored one can be older than the toolset that built the
-    # module). Safe: GMP and MPFR allocate and free their own memory. Set before any
-    # target, since everything linked into the module (nanobind too) must match.
-    if (SKBUILD)
+    # The binding modules link MSVC's runtime statically, so wheels and npm packages
+    # need no msvcp140.dll (a vendored one can be older than the toolset that built
+    # the module). Safe: GMP and MPFR allocate and free their own memory. Set before
+    # any target, since everything linked into a module must match.
+    if (POTATO_PEELING_BINDING)
         set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
     endif ()
 endif ()
@@ -116,7 +125,7 @@ generate_export_header(potato_peeling_core
         STATIC_DEFINE POTATO_PEELING_STATIC_DEFINE)
 
 set(POTATO_PEELING_SHARED OFF)
-if (BUILD_SHARED_LIBS AND NOT SKBUILD)
+if (BUILD_SHARED_LIBS AND NOT POTATO_PEELING_BINDING)
     set(POTATO_PEELING_SHARED ON)
 endif ()
 if (POTATO_PEELING_SHARED)
@@ -126,7 +135,7 @@ else ()
 endif ()
 
 # ── The C++ library: potato_peeling::potato_peeling ───────────────────────────
-if (NOT SKBUILD)
+if (NOT POTATO_PEELING_BINDING)
     add_library(potato_peeling $<TARGET_OBJECTS:potato_peeling_core>)
     add_library(potato_peeling::potato_peeling ALIAS potato_peeling)
     target_include_directories(potato_peeling PUBLIC
@@ -166,13 +175,13 @@ if (NOT SKBUILD)
 endif ()
 
 # ── C++ tests (ctest) ─────────────────────────────────────────────────────────
-if (CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR AND NOT SKBUILD)
+if (CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR AND NOT POTATO_PEELING_BINDING)
     set(POTATO_PEELING_TESTS_DEFAULT ON)
 else ()
     set(POTATO_PEELING_TESTS_DEFAULT OFF)
 endif ()
 option(POTATO_PEELING_BUILD_TESTS "Build the C++ tests" ${POTATO_PEELING_TESTS_DEFAULT})
-if (POTATO_PEELING_BUILD_TESTS AND NOT SKBUILD)
+if (POTATO_PEELING_BUILD_TESTS AND NOT POTATO_PEELING_BINDING)
     enable_testing()
     add_subdirectory(tests/cpp)
 endif ()
@@ -193,4 +202,30 @@ if (SKBUILD)
     target_link_libraries(_core PRIVATE potato_peeling_core)
     target_compile_definitions(_core PRIVATE CGAL_LICENSE_ERROR)
     install(TARGETS _core DESTINATION potato_peeling COMPONENT python)
+endif ()
+
+# ── Node.js addon (cmake-js): potato_peeling.node ─────────────────────────────
+if (CMAKE_JS_VERSION)
+    # node-addon-api's headers, from the js/ package's dependencies.
+    execute_process(
+            COMMAND node -p "require('node-addon-api').include"
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/js
+            OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE node_addon_api_dir
+            COMMAND_ERROR_IS_FATAL ANY)
+    string(REPLACE "\"" "" node_addon_api_dir "${node_addon_api_dir}")
+
+    add_library(potato_peeling_node SHARED bindings/node/addon.cpp ${CMAKE_JS_SRC})
+    set_target_properties(potato_peeling_node PROPERTIES
+            OUTPUT_NAME potato_peeling PREFIX "" SUFFIX ".node")
+    target_include_directories(potato_peeling_node PRIVATE ${CMAKE_JS_INC} ${node_addon_api_dir})
+    target_link_libraries(potato_peeling_node PRIVATE potato_peeling_core ${CMAKE_JS_LIB})
+    # Node-API 8 (Node 12.22+); C++ exceptions map to JavaScript ones, and a value of
+    # the wrong JavaScript type throws instead of being misread.
+    target_compile_definitions(potato_peeling_node PRIVATE
+            NAPI_VERSION=8 NAPI_CPP_EXCEPTIONS NODE_ADDON_API_DISABLE_DEPRECATED
+            NODE_ADDON_API_ENABLE_TYPE_CHECK_ON_AS CGAL_LICENSE_ERROR)
+    if (MSVC AND CMAKE_JS_NODELIB_DEF AND CMAKE_JS_NODELIB_TARGET)
+        execute_process(COMMAND ${CMAKE_AR} /def:${CMAKE_JS_NODELIB_DEF}
+                /out:${CMAKE_JS_NODELIB_TARGET} ${CMAKE_STATIC_LINKER_FLAGS})
+    endif ()
 endif ()

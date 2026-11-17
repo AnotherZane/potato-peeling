@@ -4,3 +4,6 @@ __pycache__/
 /build/
 /dist/
 .idea/
+/js/node_modules/
+/js/dist/
+/js/dist-test/

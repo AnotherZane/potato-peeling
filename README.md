@@ -9,7 +9,7 @@
 
 Algorithms for the [potato-peeling](https://en.wikipedia.org/wiki/Potato_peeling) problem: find the largest-area convex polygon contained in a simple polygon (its *convex skull*).
 
-A C++ library with Python bindings; JavaScript bindings (a native Node.js addon and WebAssembly) are planned.
+A C++ library with Python and Node.js bindings; WebAssembly (for browsers) is planned.
 
 > [!WARNING]
 > Alpha release: the API may still change before 0.1.
@@ -18,6 +18,7 @@ A C++ library with Python bindings; JavaScript bindings (a native Node.js addon 
 
 - [Methods](#methods)
 - [Python](#python)
+- [JavaScript](#javascript)
 - [C++](#c)
 - [Building](#building)
 - [Tests](#tests)
@@ -66,7 +67,7 @@ float(pp.upper_bound(p))         # 21.826: no convex polygon in P is larger
 
 ### Inputs and results
 
-Polygons may be given as sequences of (x, y) pairs (`int`, `float`, `Fraction` or `Decimal`), NumPy arrays of shape (n, 2), or objects with `__geo_interface__` such as shapely polygons (exterior ring only). Floats are read exactly: `0.1` is the double nearest 0.1.
+Polygons may be given as sequences of (x, y) pairs (`int`, `float`, `Fraction` or `Decimal`), NumPy arrays of shape (n, 2), GeoJSON Polygon or Feature dicts, or objects with `__geo_interface__` such as shapely polygons (exterior ring only). Floats are read exactly: `0.1` is the double nearest 0.1.
 
 Results are exact: a `Skull` has `vertices` and `area` as `Fraction`s, `coords` as floats, and `__geo_interface__`, so `shapely.geometry.shape(skull)` works. Options are keyword arguments, for example `pp.approximate_convex_skull(p, epsilon=0.05, seed=1)`.
 
@@ -75,6 +76,18 @@ Results are exact: a `Skull` has `vertices` and `area` as `Fraction`s, `coords` 
 Every method takes `timeout=` in seconds, which raises `TimeoutError`, and `cancel=`, a `threading.Event` or a callable checked about every 20 ms, which raises `potato_peeling.Cancelled` once set or true. `refine`, and `convex_skull` while refining, return the best answer so far instead. Ctrl-C interrupts any call on the main thread. Calls release the GIL, so polygons can be solved in parallel with threads; `threads=` additionally parallelises Cabello's step and refinement inside one call (0, the default, uses every core; the answer does not depend on it).
 
 `InvalidPolygonError` (a `ValueError`) is raised for input that is not a simple polygon; `CertificationError` if a result fails its own check, which would be a bug.
+
+## JavaScript
+
+Node.js 20 or later, as a native addon (the npm package is not released yet). Methods return Promises, results are exact BigInt fractions, and solves stop through an `AbortSignal` or a timeout; see the [package README](https://github.com/AnotherZane/potato-peeling/blob/main/js/README.md).
+
+```js
+import * as pp from 'potato-peeling';
+
+const best = await pp.exactConvexSkull([[0, 0], [6, 1], [8, 5], [4, 4], [2, 8]]);
+best.area.toString();   // '109/5'
+best.coords;            // [[8, 5], [0.8, 3.2], [0, 0], [6, 1]]
+```
 
 ## C++
 
@@ -140,6 +153,13 @@ Python package:
 uv sync
 ```
 
+Node.js package (from `js/`):
+
+```
+npm install
+npm run build:native && npm run build
+```
+
 C++ library and its tests:
 
 ```
@@ -153,6 +173,7 @@ cmake --install build --prefix <prefix>
 ```
 uv run pytest                                 # Python, ~2 min; -m slow for the larger set
 ctest --test-dir build -LE slow               # C++, ~30 s; -L slow for the brute-force sweeps
+npm test                                      # JavaScript (from js/), ~10 s
 ```
 
 The Python tests check the exact methods against the exact optima published in the thesis, on 81 Natural Earth polygons ([`tests/data/optima.json`](https://github.com/AnotherZane/potato-peeling/blob/main/tests/data/optima.json)), and every method's guarantees on those and on hand-made polygons. The C++ tests check the vertex skull, longest segment and mesh skull against brute-force searches on random polygons.

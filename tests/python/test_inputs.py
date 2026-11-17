@@ -26,6 +26,8 @@ FORMS = {
     "tuple of tuples": tuple(L_SHAPE),
     "geojson": {"type": "Polygon", "coordinates": [[list(p) for p in L_SHAPE + [L_SHAPE[0]]]]},
     "geojson 3d": {"type": "Polygon", "coordinates": [[[x, y, 7] for x, y in L_SHAPE]]},
+    "geojson feature": {"type": "Feature", "properties": {},
+                        "geometry": {"type": "Polygon", "coordinates": [L_SHAPE]}},
 }
 
 
