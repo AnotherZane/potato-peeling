@@ -4,6 +4,7 @@
 [![Wheels](https://github.com/AnotherZane/potato-peeling/actions/workflows/wheels.yml/badge.svg)](https://github.com/AnotherZane/potato-peeling/actions/workflows/wheels.yml)
 [![PyPI](https://img.shields.io/pypi/v/potato-peeling)](https://pypi.org/project/potato-peeling/)
 [![Python](https://img.shields.io/pypi/pyversions/potato-peeling)](https://pypi.org/project/potato-peeling/)
+[![npm](https://img.shields.io/npm/v/potato-peeling)](https://www.npmjs.com/package/potato-peeling)
 [![C++17](https://img.shields.io/badge/C%2B%2B-17-blue)](https://en.cppreference.com/cpp/17)
 [![License: LGPL-3.0-or-later](https://img.shields.io/badge/license-LGPL--3.0--or--later-blue)](https://github.com/AnotherZane/potato-peeling/blob/main/COPYING.LESSER)
 
@@ -79,7 +80,7 @@ Every method takes `timeout=` in seconds, which raises `TimeoutError`, and `canc
 
 ## JavaScript
 
-Node.js 20 or later, as a native addon (the npm package is not released yet). Methods return Promises, results are exact BigInt fractions, and solves stop through an `AbortSignal` or a timeout; see the [package README](https://github.com/AnotherZane/potato-peeling/blob/main/js/README.md).
+Node.js 20 or later, as a native addon: `npm install potato-peeling`. Methods return Promises, results are exact BigInt fractions, and solves stop through an `AbortSignal` or a timeout; see the [package README](https://github.com/AnotherZane/potato-peeling/blob/main/js/README.md).
 
 ```js
 import * as pp from 'potato-peeling';

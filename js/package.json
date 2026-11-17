@@ -1,6 +1,6 @@
 {
   "name": "potato-peeling",
-  "version": "0.1.0-alpha.4",
+  "version": "0.1.0-alpha.5",
   "private": true,
   "description": "The largest convex polygon inside a simple polygon (the potato-peeling problem): exact and approximate algorithms, with exact results",
   "license": "LGPL-3.0-or-later",
