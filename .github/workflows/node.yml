@@ -178,5 +178,6 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          for f in addons/*.tgz; do npm publish "$f" --access public --tag latest; done
+          # ./ so npm reads a path: addons/x.tgz alone is GitHub shorthand (owner/repo).
+          for f in addons/*.tgz; do npm publish "./$f" --access public --tag latest; done
           (cd build/npm/potato-peeling && npm publish --access public --tag latest)
