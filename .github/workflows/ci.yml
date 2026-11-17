@@ -36,11 +36,11 @@ jobs:
         include:
           - name: Ubuntu (latest)
             os: ubuntu-latest
-            python: true
+            bindings: true
           # The oldest supported setup: CGAL 5.4, Boost 1.74, CMake 3.22. C++ only.
           - name: Ubuntu 22.04 (minimum versions)
             os: ubuntu-22.04
-            python: false
+            bindings: false
     steps:
       - uses: actions/checkout@v7
       - name: Dependencies
@@ -53,16 +53,27 @@ jobs:
           cmake -S . -B build/ci -DCMAKE_BUILD_TYPE=Release
           cmake --build build/ci -j "$(nproc)"
           ctest --test-dir build/ci -LE slow --output-on-failure
-      - if: matrix.python
+      - if: matrix.bindings
         uses: astral-sh/setup-uv@v10.3.3
-      - if: matrix.python
+      - if: matrix.bindings
         name: Python tests
         run: |
           uv sync
           uv run pytest
-      - if: matrix.python
+      - if: matrix.bindings
         name: Type stub up to date
         run: bash ci/update_stub.sh --check
+      - if: matrix.bindings
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - if: matrix.bindings
+        name: Node.js tests
+        working-directory: js
+        run: |
+          npm ci
+          npm run build:native
+          npm test
 
   # MSVC, against the pinned dependencies the Windows wheels use (vcpkg for GMP and
   # MPFR). C++ only: the Python package is tested through the wheels.
