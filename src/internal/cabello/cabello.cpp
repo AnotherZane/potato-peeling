@@ -4,7 +4,6 @@
 #include <cmath>
 #include <stdexcept>
 #include <atomic>
-#include <thread>
 #include <utility>
 #include <vector>
 
@@ -17,6 +16,7 @@
 #include "internal/cabello/sampling.hpp"
 #include "internal/cabello/visibility.hpp"
 #include "internal/geometry.hpp"
+#include "internal/parallel.hpp"
 
 namespace potato_peeling::internal::cabello {
     namespace {
@@ -145,6 +145,7 @@ namespace potato_peeling::internal::cabello {
         double best_area = 0;
         std::vector<Pt> best_points;
 
+        ThreadPool pool(resolve_threads(opt.threads));
         for (std::size_t it = 0; it < iterations; ++it) {
             check_stop(opt.should_stop);
 
@@ -177,37 +178,26 @@ namespace potato_peeling::internal::cabello {
                 edges.resize(*opt.max_edges);
             }
 
-            // Lines 8-14. The calling thread works alongside threads - 1 others and
-            // is the only one that calls should_stop, also from inside its edge
-            // searches; the others see `stopped`, there too.
+            // Lines 8-14, one task per edge. Only the calling thread (w == 0) calls
+            // should_stop, also from inside its edge searches; the others see
+            // `stopped`, there too. A search that throws stops the others the same
+            // way, and the pool rethrows its exception here.
             std::vector<EdgeResult> per_edge(edges.size());
-            const unsigned threads
-                = opt.threads ? opt.threads : std::max(1u, std::thread::hardware_concurrency());
-            std::atomic<std::size_t> next{0};
             std::atomic<bool> stopped{false};
-            const auto work = [&](const bool caller) {
+            pool.run(edges.size(), [&](const std::size_t e, const std::size_t w) {
                 const StopFn poll = [&] {
-                    if (caller && !stopped && opt.should_stop && opt.should_stop()) stopped = true;
+                    if (w == 0 && !stopped && opt.should_stop && opt.should_stop()) stopped = true;
                     return stopped.load();
                 };
-                for (;;) {
-                    if (poll()) return;
-                    const std::size_t e = next.fetch_add(1);
-                    if (e >= edges.size()) return;
+                if (poll()) return;
+                try {
                     per_edge[e] = search_edge(opt, oracle, R[edges[e].first], R[edges[e].second], U,
                                               r_ab, s_ab, it, e, poll);
+                } catch (...) {
+                    stopped = true;
+                    throw;
                 }
-            };
-            std::vector<std::thread> pool;
-            for (unsigned t = 1; t < threads; ++t) pool.emplace_back(work, false);
-            try {
-                work(true);
-            } catch (...) {
-                stopped = true;
-                for (auto &th : pool) th.join();
-                throw;
-            }
-            for (auto &th : pool) th.join();
+            });
             if (stopped) throw cancelled("stopped by should_stop");
 
             // Reduce in index order; strict > keeps the earliest edge on a tie.
