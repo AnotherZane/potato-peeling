@@ -68,6 +68,8 @@ float(pp.upper_bound(p))         # 21.826: no convex polygon in P is larger
 
 ### Inputs and results
 
+Wheels are published for Linux (x86_64 and aarch64; glibc and musl), macOS (arm64 and x86_64) and Windows (x64 and ARM64). On musl Linux (Alpine) the library runs several times slower (about 10x in our tests), which we attribute to musl's memory allocator: exact arithmetic allocates heavily.
+
 Polygons may be given as sequences of (x, y) pairs (`int`, `float`, `Fraction` or `Decimal`), NumPy arrays of shape (n, 2), GeoJSON Polygon or Feature dicts, or objects with `__geo_interface__` such as shapely polygons (exterior ring only). Floats are read exactly: `0.1` is the double nearest 0.1.
 
 Results are exact: a `Skull` has `vertices` and `area` as `Fraction`s, `coords` as floats, and `__geo_interface__`, so `shapely.geometry.shape(skull)` works. Options are keyword arguments, for example `pp.approximate_convex_skull(p, epsilon=0.05, seed=1)`.

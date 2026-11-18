@@ -13,7 +13,7 @@ The Node.js package of [potato-peeling](https://github.com/AnotherZane/potato-pe
 npm install potato-peeling
 ```
 
-Node.js 20 or later, on Linux (x64, arm64; glibc), macOS (arm64, x64) and Windows (x64). The native addon for your platform comes as an optional dependency (`@potato-peeling/<platform>-<arch>`); nothing is compiled on install.
+Node.js 20 or later, on Linux (x64, arm64; glibc and musl, e.g. Alpine), macOS (arm64, x64) and Windows (x64, arm64). On musl the library runs several times slower (about 10x in our tests), which we attribute to musl's memory allocator: exact arithmetic allocates heavily. The native addon for your platform comes as an optional dependency (`@potato-peeling/<platform>-<arch>`); nothing is compiled on install.
 
 ## Quick start
 

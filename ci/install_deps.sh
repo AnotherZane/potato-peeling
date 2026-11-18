@@ -3,14 +3,15 @@
 # CGAL and Boost headers with their CMake package files, pinned by SHA-256, and
 # GMP and MPFR. On macOS GMP and MPFR are built from source for
 # MACOSX_DEPLOYMENT_TARGET (Homebrew's are built for the runner's macOS); on
-# Linux they come from the manylinux image's package manager; on Windows (Git
-# Bash) from vcpkg, built with MSVC as pinned in ci/vcpkg/vcpkg.json.
+# Linux they come from the manylinux or musllinux image's package manager; on Windows
+# (Git Bash) from vcpkg, built with MSVC as pinned in ci/vcpkg/vcpkg.json, for the
+# machine's architecture (triplet x64-windows or arm64-windows).
 #
 # A prefix already filled by this exact script, for this platform and deployment
 # target, is left as it is (CI caches it on macOS).
 #
 #   ci/install_deps.sh [PREFIX]      then: CMAKE_PREFIX_PATH=PREFIX
-#                                    (Windows: also PREFIX/vcpkg/x64-windows)
+#                                    (Windows: also PREFIX/vcpkg/<triplet>)
 set -euo pipefail
 
 PREFIX="${1:-/opt/deps}"
@@ -21,7 +22,7 @@ sha256() {
     else shasum -a 256 "$1" | cut -d' ' -f1; fi
 }
 
-STAMP="$(sha256 "$0") $(sha256 "$HERE/vcpkg/vcpkg.json") $(uname -s) $(uname -m) ${MACOSX_DEPLOYMENT_TARGET:-}"
+STAMP="$(sha256 "$0") $(sha256 "$HERE/vcpkg/vcpkg.json") $(uname -s) $(uname -m) ${PROCESSOR_ARCHITEW6432:-} ${MACOSX_DEPLOYMENT_TARGET:-}"
 if [ "$(cat "$PREFIX/.install_deps" 2>/dev/null)" = "$STAMP" ]; then
     echo "dependencies already installed in $PREFIX"
     exit 0
@@ -94,6 +95,13 @@ if [ "$(uname)" = Darwin ]; then
         otool -hv "$lib" | grep -q TWOLEVEL || { echo "$lib: flat namespace" >&2; exit 1; }
     done
 elif [[ "$(uname -s)" == MINGW* || "$(uname -s)" == MSYS* ]]; then
+    # The machine's architecture: Git Bash may itself run as x64 under emulation on
+    # ARM64, where uname -m and PROCESSOR_ARCHITECTURE say AMD64 and
+    # PROCESSOR_ARCHITEW6432 says ARM64.
+    case "${PROCESSOR_ARCHITEW6432:-$PROCESSOR_ARCHITECTURE}" in
+        ARM64) TRIPLET=arm64-windows ;;
+        *) TRIPLET=x64-windows ;;
+    esac
     # vcpkg itself at the pinned baseline commit, so its version database and tool
     # match the manifest whatever vcpkg a machine has installed (a newer baseline
     # than an installed checkout is not resolvable from that checkout).
@@ -106,10 +114,13 @@ elif [[ "$(uname -s)" == MINGW* || "$(uname -s)" == MSYS* ]]; then
     git -C "$VCPKG_ROOT" fetch --quiet --depth 1 https://github.com/microsoft/vcpkg "$BASELINE"
     git -C "$VCPKG_ROOT" checkout --quiet FETCH_HEAD
     cmd.exe //c "$(cygpath -w "$VCPKG_ROOT/bootstrap-vcpkg.bat")" -disableMetrics
-    "$VCPKG_ROOT/vcpkg" install --triplet x64-windows \
+    "$VCPKG_ROOT/vcpkg" install --triplet "$TRIPLET" \
         --x-manifest-root="$(cygpath -m "$HERE/vcpkg")" \
         --x-install-root="$(cygpath -m "$PREFIX/vcpkg")"
     rm -rf "$VCPKG_ROOT"
+elif command -v apk >/dev/null; then
+    # musllinux (Alpine)
+    apk add --no-cache gmp-dev mpfr-dev
 elif command -v dnf >/dev/null || command -v yum >/dev/null; then
     # A stalled mirror once hung this step silently for over 20 minutes, and another
     # served an empty index: show progress, fail over slow mirrors, give up on an

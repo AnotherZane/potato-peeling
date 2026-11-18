@@ -68,6 +68,11 @@ jobs:
           - platform: win32-x64
             os: windows-latest
             deps: C:/deps
+            vcpkg: x64-windows
+          - platform: win32-arm64
+            os: windows-11-arm
+            deps: C:/deps
+            vcpkg: arm64-windows
     env:
       MACOSX_DEPLOYMENT_TARGET: "11.0"
     steps:
@@ -87,7 +92,7 @@ jobs:
       - name: Build
         working-directory: js
         env:
-          CMAKE_PREFIX_PATH: ${{ runner.os == 'Windows' && 'C:/deps;C:/deps/vcpkg/x64-windows' || matrix.deps }}
+          CMAKE_PREFIX_PATH: ${{ runner.os == 'Windows' && format('C:/deps;C:/deps/vcpkg/{0}', matrix.vcpkg) || matrix.deps }}
         run: |
           npm ci
           npm run build:native
@@ -95,7 +100,7 @@ jobs:
         run: |
           py=$(command -v python3 || command -v python)
           extra=()
-          if [ "$RUNNER_OS" = Windows ]; then extra=(--lib-dir C:/deps/vcpkg/x64-windows/bin); fi
+          if [ "$RUNNER_OS" = Windows ]; then extra=(--lib-dir "C:/deps/vcpkg/${{ matrix.vcpkg }}/bin"); fi
           "$py" ci/npm_package.py platform build/node/Release/potato_peeling.node build/npm "${extra[@]}"
           cd "build/npm/${{ matrix.platform }}" && npm pack
       - uses: actions/upload-artifact@v7
@@ -147,9 +152,35 @@ jobs:
         working-directory: js
         run: npm test
 
+  # musl Linux (Alpine): the same build, packing and tests, in the musllinux container
+  # by docker run (ci/node_musl.sh), since GitHub's JavaScript actions do not run
+  # reliably in Alpine job containers.
+  musl:
+    name: Addon (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux-x64-musl
+            os: ubuntu-latest
+            image: quay.io/pypa/musllinux_1_2_x86_64
+          - platform: linux-arm64-musl
+            os: ubuntu-24.04-arm
+            image: quay.io/pypa/musllinux_1_2_aarch64
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build, package and test
+        run: docker run --rm -v "$PWD:/w" -w /w "${{ matrix.image }}" bash ci/node_musl.sh
+      - uses: actions/upload-artifact@v7
+        with:
+          name: npm-${{ matrix.platform }}
+          path: build/npm/${{ matrix.platform }}/*.tgz
+
   publish:
     if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
-    needs: [version, build]
+    needs: [version, build, musl]
     runs-on: ubuntu-latest
     environment: npm
     permissions:

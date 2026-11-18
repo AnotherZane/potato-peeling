@@ -82,6 +82,7 @@ jobs:
           - { platform: darwin-arm64, os: macos-15 }
           - { platform: darwin-x64, os: macos-15-intel }
           - { platform: win32-x64, os: windows-latest }
+          - { platform: win32-arm64, os: windows-11-arm }
     steps:
       - uses: actions/download-artifact@v8
         with:
@@ -130,6 +131,7 @@ jobs:
           - { platform: darwin-arm64, os: macos-15 }
           - { platform: darwin-x64, os: macos-15-intel }
           - { platform: win32-x64, os: windows-latest }
+          - { platform: win32-arm64, os: windows-11-arm }
         python: ["3.15"]
     steps:
       - uses: actions/checkout@v7

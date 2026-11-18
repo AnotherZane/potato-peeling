@@ -58,9 +58,8 @@ markers = ["slow: larger fixture polygons and the suboptimal optima (minutes)"]
 
 [tool.cibuildwheel]
 # 3.10 and 3.11 get their own wheels; the cp312 wheel is abi3 (wheel.py-api above),
-# for 3.12 and later. Free-threaded and musllinux wheels come later.
+# for 3.12 and later. Free-threaded wheels come later.
 build = ["cp310-*", "cp311-*", "cp312-*"]
-skip = ["*-musllinux_*"]
 # The default test set, from the installed wheel: the tests and the pytest
 # settings are copied, the package source is not.
 test-sources = ["tests", "pyproject.toml"]
@@ -70,6 +69,8 @@ test-command = "pytest tests/python"
 [tool.cibuildwheel.linux]
 manylinux-x86_64-image = "manylinux_2_28"
 manylinux-aarch64-image = "manylinux_2_28"
+musllinux-x86_64-image = "musllinux_1_2"
+musllinux-aarch64-image = "musllinux_1_2"
 before-all = "bash ci/install_deps.sh /opt/deps"
 environment = { CMAKE_PREFIX_PATH = "/opt/deps" }
 
@@ -78,9 +79,31 @@ before-all = "bash ci/install_deps.sh /tmp/potato-peeling-deps"
 environment = { CMAKE_PREFIX_PATH = "/tmp/potato-peeling-deps", MACOSX_DEPLOYMENT_TARGET = "11.0" }
 
 [tool.cibuildwheel.windows]
-archs = ["AMD64"]
+# Each runner builds its own architecture: AMD64 on windows-latest, ARM64 on
+# windows-11-arm.
+archs = ["native"]
 # Git Bash by path: a bare `bash` can resolve to WSL's from cmd.exe.
 before-all = '"C:/Program Files/Git/bin/bash.exe" ci/install_deps.sh C:/deps'
 environment = { CMAKE_PREFIX_PATH = "C:/deps;C:/deps/vcpkg/x64-windows" }
 before-build = "pip install delvewheel"
 repair-wheel-command = "delvewheel repair --add-path C:/deps/vcpkg/x64-windows/bin -w {dest_dir} {wheel}"
+
+# ARM64 Windows: vcpkg's arm64-windows triplet.
+[[tool.cibuildwheel.overrides]]
+select = "*-win_arm64"
+environment = { CMAKE_PREFIX_PATH = "C:/deps;C:/deps/vcpkg/arm64-windows" }
+repair-wheel-command = "delvewheel repair --add-path C:/deps/vcpkg/arm64-windows/bin -w {dest_dir} {wheel}"
+
+# NumPy publishes musllinux and win_arm64 wheels only from 3.12 (shapely from 3.11);
+# without a wheel pip would build it from source, so these test without them (their
+# tests skip).
+[[tool.cibuildwheel.overrides]]
+select = "cp310-musllinux_* cp311-musllinux_* cp310-win_arm64 cp311-win_arm64"
+test-requires = ["pytest"]
+
+# On musl the library runs about 10x slower (the default set takes ~20 minutes per
+# wheel), so musllinux wheels run the input, error and cancellation tests (~1.5 minutes):
+# the C++ is the same as on manylinux, where the default set runs.
+[[tool.cibuildwheel.overrides]]
+select = "*-musllinux_*"
+test-command = "pytest tests/python/test_inputs.py tests/python/test_errors.py tests/python/test_cancel.py"

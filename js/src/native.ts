@@ -1,5 +1,6 @@
 // Loads the compiled addon: the package for this platform (@potato-peeling/<platform>,
-// an optional dependency), or a local build from the repository (cmake-js).
+// an optional dependency: linux-x64, linux-x64-musl, darwin-arm64, win32-arm64, ...), or a
+// local build from the repository (cmake-js).
 
 import { createRequire } from 'node:module';
 
@@ -37,8 +38,20 @@ export interface Native {
   longestSegment(p: RawPoint[]): [[Raw, Raw], [Raw, Raw]];
 }
 
+/** musl Linux (Alpine): Node's report gives a glibc version only when running on glibc. */
+function isMusl(): boolean {
+  const report = process.report?.getReport() as { header?: { glibcVersionRuntime?: string } };
+  return !report?.header?.glibcVersionRuntime;
+}
+
+/** The platform package's name for this Node, as ci/npm_package.py names it. */
+export function platformName(): string {
+  const name = `${process.platform}-${process.arch}`;
+  return process.platform === 'linux' && isMusl() ? `${name}-musl` : name;
+}
+
 function load(): Native {
-  const platformPackage = `@potato-peeling/${process.platform}-${process.arch}`;
+  const platformPackage = `@potato-peeling/${platformName()}`;
   const tried: string[] = [];
   for (const id of [platformPackage, '../../build/node/Release/potato_peeling.node']) {
     try {
@@ -48,7 +61,7 @@ function load(): Native {
     }
   }
   throw new Error(
-    `potato-peeling: no native addon for ${process.platform}-${process.arch}.\n  ${tried.join('\n  ')}`,
+    `potato-peeling: no native addon for ${platformName()}.\n  ${tried.join('\n  ')}`,
   );
 }
 

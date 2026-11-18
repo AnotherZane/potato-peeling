@@ -22,9 +22,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 JS = ROOT / "js"
-# The platform packages, as process.platform-process.arch; the loader (js/src/native.ts)
-# asks for @potato-peeling/<this>.
-PLATFORMS = ["linux-x64", "linux-arm64", "darwin-arm64", "darwin-x64", "win32-x64"]
+# The platform packages, as process.platform-process.arch, with -musl on musl Linux; the
+# loader (js/src/native.ts, platformName) asks for @potato-peeling/<this>.
+PLATFORMS = ["linux-x64", "linux-arm64", "linux-x64-musl", "linux-arm64-musl",
+             "darwin-arm64", "darwin-x64", "win32-x64", "win32-arm64"]
+# As the loader decides: Node's report gives a glibc version only on glibc.
+NODE_PLATFORM = ("const r = process.report.getReport();"
+                 "process.platform + '-' + process.arch"
+                 " + (process.platform === 'linux' && !r.header.glibcVersionRuntime ? '-musl' : '')")
 LICENCES = ["COPYING", "COPYING.LESSER", "THIRD-PARTY-NOTICES.txt", "LICENSES"]
 LIBS = ("gmp", "mpfr")
 
@@ -52,8 +57,11 @@ def is_bundled(path: str) -> bool:
 
 
 def bundle_linux(addon: Path) -> list[str]:
-    # ldd lists each needed library with the file the loader resolved it to.
-    found = re.findall(r"^\s*(\S+) => (\S+)", run("ldd", str(addon)), re.M)
+    # ldd lists each needed library with the file the loader resolved it to. musl's ldd
+    # also fails on the Node-API symbols, which Node itself provides, so its exit status
+    # is ignored.
+    ldd = subprocess.run(["ldd", str(addon)], capture_output=True, text=True).stdout
+    found = re.findall(r"^\s*(\S+) => (\S+)", ldd, re.M)
     libs = []
     for soname, path in found:
         if is_bundled(soname):
@@ -102,10 +110,11 @@ def bundle_windows(addon: Path, lib_dir: Path) -> list[str]:
 
 
 def platform(addon_src: Path, out: Path, lib_dir: Path | None) -> Path:
-    name = run("node", "-p", "process.platform + '-' + process.arch").strip()
+    name = run("node", "-p", NODE_PLATFORM).strip()
     if name not in PLATFORMS:
         raise SystemExit(f"no package for {name}")
-    os_, cpu = name.split("-")
+    os_, cpu = name.split("-")[:2]
+    libc = "musl" if name.endswith("-musl") else "glibc"
     base = base_package()
     pkg = out / name
     shutil.rmtree(pkg, ignore_errors=True)
@@ -133,7 +142,7 @@ def platform(addon_src: Path, out: Path, lib_dir: Path | None) -> Path:
         "repository": base["repository"],
         "os": [os_],
         "cpu": [cpu],
-        **({"libc": ["glibc"]} if os_ == "linux" else {}),
+        **({"libc": [libc]} if os_ == "linux" else {}),
         "main": "potato_peeling.node",
         "files": ["potato_peeling.node", *libs, *LICENCES],
     }
