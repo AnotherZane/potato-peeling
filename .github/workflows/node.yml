@@ -45,8 +45,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     # Linux builds in the wheels' manylinux image, so the addon needs only glibc 2.28.
     container: ${{ matrix.container }}
-    # a hang (a stalled download, a stuck build) fails here instead of after 6 hours
-    timeout-minutes: 90
+    # a hang (a stalled download, a stuck build) fails here instead of after 6 hours;
+    # win32-arm64 gets longer, as it builds GMP and MPFR with x64 MSYS2 tools under
+    # emulation when they are not cached (about 50 minutes).
+    timeout-minutes: ${{ matrix.platform == 'win32-arm64' && 150 || 90 }}
     strategy:
       fail-fast: false
       matrix:

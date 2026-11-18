@@ -22,7 +22,16 @@ sha256() {
     else shasum -a 256 "$1" | cut -d' ' -f1; fi
 }
 
-STAMP="$(sha256 "$0") $(sha256 "$HERE/vcpkg/vcpkg.json") $(uname -s) $(uname -m) ${PROCESSOR_ARCHITEW6432:-} ${MACOSX_DEPLOYMENT_TARGET:-}"
+# Windows: the machine's architecture (AMD64 or ARM64), from the registry. Git Bash
+# may run as x64 under emulation on ARM64, where uname -m and PROCESSOR_ARCHITECTURE
+# say AMD64 (PROCESSOR_ARCHITEW6432 is set only for 32-bit processes).
+WIN_ARCH=
+if command -v reg >/dev/null && [[ "$(uname -s)" == MINGW* || "$(uname -s)" == MSYS* ]]; then
+    WIN_ARCH=$(reg query 'HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment' \
+        //v PROCESSOR_ARCHITECTURE | tr -d '\r' | awk '/PROCESSOR_ARCHITECTURE/ {print $3}')
+fi
+
+STAMP="$(sha256 "$0") $(sha256 "$HERE/vcpkg/vcpkg.json") $(uname -s) $(uname -m) $WIN_ARCH ${MACOSX_DEPLOYMENT_TARGET:-}"
 if [ "$(cat "$PREFIX/.install_deps" 2>/dev/null)" = "$STAMP" ]; then
     echo "dependencies already installed in $PREFIX"
     exit 0
@@ -95,13 +104,12 @@ if [ "$(uname)" = Darwin ]; then
         otool -hv "$lib" | grep -q TWOLEVEL || { echo "$lib: flat namespace" >&2; exit 1; }
     done
 elif [[ "$(uname -s)" == MINGW* || "$(uname -s)" == MSYS* ]]; then
-    # The machine's architecture: Git Bash may itself run as x64 under emulation on
-    # ARM64, where uname -m and PROCESSOR_ARCHITECTURE say AMD64 and
-    # PROCESSOR_ARCHITEW6432 says ARM64.
-    case "${PROCESSOR_ARCHITEW6432:-$PROCESSOR_ARCHITECTURE}" in
+    case "$WIN_ARCH" in
         ARM64) TRIPLET=arm64-windows ;;
-        *) TRIPLET=x64-windows ;;
+        AMD64) TRIPLET=x64-windows ;;
+        *) echo "unknown Windows architecture: '$WIN_ARCH'" >&2; exit 1 ;;
     esac
+    echo "vcpkg triplet: $TRIPLET"
     # vcpkg itself at the pinned baseline commit, so its version database and tool
     # match the manifest whatever vcpkg a machine has installed (a newer baseline
     # than an installed checkout is not resolvable from that checkout).

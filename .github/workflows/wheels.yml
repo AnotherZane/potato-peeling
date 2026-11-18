@@ -70,8 +70,10 @@ jobs:
     name: Wheels (${{ matrix.target.platform }})
     needs: sdist
     runs-on: ${{ matrix.target.os }}
-    # a hang (a stalled download, a stuck test) fails here instead of after 6 hours
-    timeout-minutes: 90
+    # a hang (a stalled download, a stuck test) fails here instead of after 6 hours;
+    # win32-arm64 gets longer, as it builds GMP and MPFR with x64 MSYS2 tools under
+    # emulation when they are not cached (about 50 minutes).
+    timeout-minutes: ${{ matrix.target.platform == 'win32-arm64' && 150 || 90 }}
     strategy:
       fail-fast: false
       matrix:
