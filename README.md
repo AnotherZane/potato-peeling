@@ -1,10 +1,10 @@
 # potato-peeling
 
 [![CI](https://github.com/AnotherZane/potato-peeling/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/AnotherZane/potato-peeling/actions/workflows/ci.yml)
-[![Wheels](https://github.com/AnotherZane/potato-peeling/actions/workflows/wheels.yml/badge.svg)](https://github.com/AnotherZane/potato-peeling/actions/workflows/wheels.yml)
 [![PyPI](https://img.shields.io/pypi/v/potato-peeling)](https://pypi.org/project/potato-peeling/)
-[![Python](https://img.shields.io/pypi/pyversions/potato-peeling)](https://pypi.org/project/potato-peeling/)
 [![npm](https://img.shields.io/npm/v/potato-peeling)](https://www.npmjs.com/package/potato-peeling)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://pypi.org/project/potato-peeling/)
+[![Node.js 20+](https://img.shields.io/badge/node-20%2B-blue)](https://www.npmjs.com/package/potato-peeling)
 [![C++17](https://img.shields.io/badge/C%2B%2B-17-blue)](https://en.cppreference.com/cpp/17)
 [![License: LGPL-3.0-or-later](https://img.shields.io/badge/license-LGPL--3.0--or--later-blue)](https://github.com/AnotherZane/potato-peeling/blob/main/COPYING.LESSER)
 
